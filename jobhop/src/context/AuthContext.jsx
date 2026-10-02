@@ -116,27 +116,7 @@ export function AuthProvider({ children }) {
     // address on the account (see ResetPassword.jsx). There is no code
     // path here that accepts an email + new password directly, which is
     // exactly what would let someone change another user's password.
-    updatePassword: (newPassword) => callAuth(() => supabase.auth.updateUser({ password: newPassword })),
-
-    // Used by the "Change password" form on Settings, where the caller
-    // already has a normal session and knows the account's current
-    // password. updateUser() alone would let anyone holding an open,
-    // unattended browser session change the password without proving they
-    // know the old one - signInWithPassword() here re-verifies it first
-    // (this is the same credential check login itself uses), and only
-    // proceeds to actually change the password if that succeeds.
-    changePassword: async (currentPassword, newPassword) => {
-      const { data: userData } = await supabase.auth.getUser();
-      const email = userData?.user?.email;
-      if (!email) return { error: { message: 'No active session.' } };
-
-      const reauth = await callAuth(() =>
-        supabase.auth.signInWithPassword({ email, password: currentPassword })
-      );
-      if (reauth.error) return { error: { message: 'Current password is incorrect.' } };
-
-      return callAuth(() => supabase.auth.updateUser({ password: newPassword }));
-    }
+    updatePassword: (newPassword) => callAuth(() => supabase.auth.updateUser({ password: newPassword }))
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -4,12 +4,10 @@ import { supabase } from '../lib/supabaseClient';
 import CalendarHeatmap from '../components/CalendarHeatmap.jsx';
 import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
 import { computeMonthlyScore } from '../utils/score.js';
-import { getResumeSignedUrl } from '../utils/resume.js';
 
 export default function FriendProfile() {
   const { friendId } = useParams();
   const [profile, setProfile] = useState(null);
-  const [resumeUrl, setResumeUrl] = useState(null);
   const [applications, setApplications] = useState([]);
   const [stageHistory, setStageHistory] = useState([]);
   const [error, setError] = useState('');
@@ -24,7 +22,7 @@ export default function FriendProfile() {
         await Promise.all([
           supabase
             .from('profiles')
-            .select('id, username, full_name, bio, school, linkedin_url, github_url, resume_url')
+            .select('id, username, bio, resume_url')
             .eq('id', friendId)
             .single(),
           supabase
@@ -44,13 +42,6 @@ export default function FriendProfile() {
       setApplications(apps ?? []);
       setStageHistory(history ?? []);
       setLoading(false);
-
-      // resume_url is a private storage path, not a public link - resolve
-      // it to a short-lived signed URL (RLS still governs whether this
-      // succeeds, same as every other field here).
-      if (p?.resume_url) {
-        getResumeSignedUrl(p.resume_url).then(setResumeUrl);
-      }
     }
     load();
   }, [friendId]);
@@ -80,26 +71,8 @@ export default function FriendProfile() {
 
       <div className="card-surface flex items-center justify-between p-5">
         <div>
-          <h1 className="font-display text-2xl font-semibold">
-            {profile.full_name || profile.username}
-          </h1>
-          <p className="text-sm text-ink2">@{profile.username}</p>
-          {profile.school && <p className="mt-1 text-sm text-ink2">{profile.school}</p>}
+          <h1 className="font-display text-2xl font-semibold">{profile.username}</h1>
           {profile.bio && <p className="mt-1 text-sm text-ink2">{profile.bio}</p>}
-          {(profile.linkedin_url || profile.github_url) && (
-            <div className="mt-2 flex gap-3 text-xs">
-              {profile.linkedin_url && (
-                <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="text-signal hover:underline">
-                  LinkedIn
-                </a>
-              )}
-              {profile.github_url && (
-                <a href={profile.github_url} target="_blank" rel="noreferrer" className="text-signal hover:underline">
-                  GitHub
-                </a>
-              )}
-            </div>
-          )}
         </div>
         <div className="text-right">
           <p className="text-xs uppercase tracking-wide text-ink2">This month's score</p>
@@ -113,9 +86,9 @@ export default function FriendProfile() {
 
       <div className="card-surface p-5">
         <h3 className="font-display text-sm font-semibold">Resume</h3>
-        {resumeUrl ? (
+        {profile.resume_url ? (
           <a
-            href={resumeUrl}
+            href={profile.resume_url}
             target="_blank"
             rel="noreferrer"
             className="mt-2 inline-block text-sm text-signal hover:underline"

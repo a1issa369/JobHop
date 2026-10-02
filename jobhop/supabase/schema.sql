@@ -24,15 +24,8 @@ create extension if not exists "pgcrypto"; -- for gen_random_uuid()
 create table profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text unique not null,
-  full_name text check (char_length(full_name) <= 100),
   avatar_url text,
   bio text,
-  school text check (char_length(school) <= 100),
-  linkedin_url text check (char_length(linkedin_url) <= 200),
-  github_url text check (char_length(github_url) <= 200),
-  -- Path inside the private `resumes` storage bucket (e.g. "<user id>/resume.pdf"),
-  -- not a public URL - a signed URL is generated on demand when it's viewed
-  -- (see src/utils/resume.js), since the bucket itself stays private.
   resume_url text,
   created_at timestamptz not null default now()
 );
@@ -349,16 +342,6 @@ insert into storage.buckets (id, name, public) values ('resumes', 'resumes', fal
 create policy "resumes_owner_write"
   on storage.objects for insert
   with check (bucket_id = 'resumes' and (storage.foldername(name))[1] = auth.uid()::text);
-
--- Needed to replace an existing resume (upload with upsert) and to remove one.
-create policy "resumes_owner_update"
-  on storage.objects for update
-  using (bucket_id = 'resumes' and (storage.foldername(name))[1] = auth.uid()::text)
-  with check (bucket_id = 'resumes' and (storage.foldername(name))[1] = auth.uid()::text);
-
-create policy "resumes_owner_delete"
-  on storage.objects for delete
-  using (bucket_id = 'resumes' and (storage.foldername(name))[1] = auth.uid()::text);
 
 create policy "resumes_owner_or_friend_read"
   on storage.objects for select
