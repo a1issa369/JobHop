@@ -6,9 +6,10 @@ const PROFILE_FIELDS =
 
 // Shared by the right-hand ProfileSidebar and the Settings "Edit profile"
 // form, so both stay in sync on one query shape. Follower/following counts
-// are derived from the friendships table's existing requester/addressee
-// direction rather than a separate "follow" table - see Navbar/ProfileSidebar
-// comments for why that mapping was chosen.
+// come from the one-directional `follows` table (Instagram-style, no
+// approval needed) rather than the mutual `friendships` table - that
+// older table still exists for the separate add/accept Friends flow, but
+// counts shown on the profile card now reflect follows.
 export function useOwnProfile(userId) {
   const [profile, setProfile] = useState(null);
   const [followers, setFollowers] = useState(0);
@@ -27,15 +28,13 @@ export function useOwnProfile(userId) {
       await Promise.all([
         supabase.from('profiles').select(PROFILE_FIELDS).eq('id', userId).single(),
         supabase
-          .from('friendships')
-          .select('id', { count: 'exact', head: true })
-          .eq('requester_id', userId)
-          .eq('status', 'accepted'),
+          .from('follows')
+          .select('follower_id', { count: 'exact', head: true })
+          .eq('follower_id', userId),
         supabase
-          .from('friendships')
-          .select('id', { count: 'exact', head: true })
-          .eq('addressee_id', userId)
-          .eq('status', 'accepted')
+          .from('follows')
+          .select('follower_id', { count: 'exact', head: true })
+          .eq('followee_id', userId)
       ]);
     setProfile(p ?? null);
     setError(pErr ?? null);

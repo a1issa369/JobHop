@@ -1,24 +1,5 @@
 import { useMemo } from 'react';
-import {
-  eachDayOfInterval,
-  endOfYear,
-  format,
-  getDay,
-  getMonth,
-  startOfYear
-} from 'date-fns';
-
-// Restricted to the current year, per spec: Jan 1 -> Dec 31 of this year only.
-function buildYearGrid() {
-  const year = new Date().getFullYear();
-  const start = startOfYear(new Date(year, 0, 1));
-  const end = endOfYear(new Date(year, 0, 1));
-  const days = eachDayOfInterval({ start, end });
-
-  // Pad the front so the grid starts on a Sunday column, GitHub-style.
-  const leadingBlanks = getDay(start);
-  return { days, leadingBlanks, year };
-}
+import { eachDayOfInterval, endOfMonth, format, getDay, startOfMonth } from 'date-fns';
 
 function levelFor(count, max) {
   if (count === 0) return 0;
@@ -38,45 +19,44 @@ const LEVEL_COLORS = [
   'bg-signal'
 ];
 
-export default function CalendarHeatmap({ applicationsByDate }) {
-  // Recomputed on every render from `new Date()` inside buildYearGrid, so
-  // this always reflects whatever year it actually is - Jan 1 of the
-  // current year through Dec 31, never a fixed/hardcoded year.
-  const { days, leadingBlanks, year } = useMemo(() => buildYearGrid(), []);
+const WEEKDAY_HEADERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
+// One real month-shaped grid per month (Sun...Sat column headers, weeks as
+// rows underneath) rather than one continuous GitHub-style strip - laid
+// out like a page-per-month wall calendar instead of a year-long ribbon.
+function buildMonthWeeks(year, monthIndex, applicationsByDate) {
+  const start = startOfMonth(new Date(year, monthIndex, 1));
+  const end = endOfMonth(start);
+  const days = eachDayOfInterval({ start, end });
+  const leadingBlanks = getDay(start);
+
+  const cells = [
+    ...Array(leadingBlanks).fill(null),
+    ...days.map((d) => {
+      const key = format(d, 'yyyy-MM-dd');
+      return { date: d, count: applicationsByDate[key] ?? 0 };
+    })
+  ];
+  const weeks = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+}
+
+export default function CalendarHeatmap({ applicationsByDate }) {
+  // Always the real current year, computed fresh on every render - never a
+  // fixed/hardcoded year.
+  const year = new Date().getFullYear();
   const max = Math.max(1, ...Object.values(applicationsByDate));
 
-  const weeks = useMemo(() => {
-    const cells = [
-      ...Array(leadingBlanks).fill(null),
-      ...days.map((d) => {
-        const key = format(d, 'yyyy-MM-dd');
-        return { date: d, count: applicationsByDate[key] ?? 0 };
-      })
-    ];
-    const result = [];
-    for (let i = 0; i < cells.length; i += 7) {
-      result.push(cells.slice(i, i + 7));
-    }
-    return result;
-  }, [days, leadingBlanks, applicationsByDate]);
-
-  // One label per week column, shown only on the week a new month actually
-  // starts - without this a bare grid of squares reads as "a wall of
-  // nothing" rather than a calendar, which was the real complaint.
-  const monthLabels = useMemo(() => {
-    let lastMonth = -1;
-    return weeks.map((week) => {
-      const firstRealDay = week.find((c) => c);
-      if (!firstRealDay) return '';
-      const month = getMonth(firstRealDay.date);
-      if (month !== lastMonth) {
-        lastMonth = month;
-        return format(firstRealDay.date, 'MMM');
-      }
-      return '';
-    });
-  }, [weeks]);
+  const months = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, i) => ({
+        index: i,
+        label: format(new Date(year, i, 1), 'MMMM'),
+        weeks: buildMonthWeeks(year, i, applicationsByDate)
+      })),
+    [year, applicationsByDate]
+  );
 
   return (
     <div className="card-surface p-4">
@@ -91,36 +71,34 @@ export default function CalendarHeatmap({ applicationsByDate }) {
         </div>
       </div>
 
-      <div className="mt-4 overflow-x-auto pb-2">
-        <div className="flex gap-1">
-          {monthLabels.map((label, i) => (
-            <div
-              key={i}
-              className="w-3 flex-shrink-0 overflow-visible whitespace-nowrap text-[10px] leading-3 text-ink2"
-            >
-              {label}
-            </div>
-          ))}
-        </div>
-        <div className="mt-1 flex gap-1">
-          {weeks.map((week, wi) => (
-            <div key={wi} className="flex flex-col gap-1">
-              {week.map((cell, di) =>
-                cell ? (
-                  <div
-                    key={di}
-                    title={`${format(cell.date, 'MMM d, yyyy')}: ${cell.count} application${
-                      cell.count === 1 ? '' : 's'
-                    }`}
-                    className={`h-3 w-3 rounded-sm ${LEVEL_COLORS[levelFor(cell.count, max)]}`}
-                  />
-                ) : (
-                  <div key={di} className="h-3 w-3" />
+      <div className="mt-4 grid grid-cols-1 gap-x-10 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {months.map((m) => (
+          <div key={m.index}>
+            <p className="mb-2 text-xs font-semibold text-ink2">{m.label}</p>
+            <div className="grid grid-cols-7 gap-1">
+              {WEEKDAY_HEADERS.map((h, i) => (
+                <div key={i} className="text-center text-[9px] leading-3 text-ink2/70">
+                  {h}
+                </div>
+              ))}
+              {m.weeks.flatMap((week, wi) =>
+                week.map((cell, di) =>
+                  cell ? (
+                    <div
+                      key={`${wi}-${di}`}
+                      title={`${format(cell.date, 'MMM d, yyyy')}: ${cell.count} application${
+                        cell.count === 1 ? '' : 's'
+                      }`}
+                      className={`h-3.5 w-3.5 rounded-sm ${LEVEL_COLORS[levelFor(cell.count, max)]}`}
+                    />
+                  ) : (
+                    <div key={`${wi}-${di}`} className="h-3.5 w-3.5" />
+                  )
                 )
               )}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );

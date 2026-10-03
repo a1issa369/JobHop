@@ -129,6 +129,24 @@ create unique index idx_friendships_unique_pair
 create index idx_friendships_requester on friendships (requester_id);
 create index idx_friendships_addressee on friendships (addressee_id);
 
+-- ---------- follows ----------
+-- A plain one-directional follow graph (follow/unfollow, no approval
+-- needed), separate from the mutual "friendships" request system above.
+-- Following someone also unlocks their profile stats (resume, activity
+-- calendar, pipeline chart) the same way an accepted friendship does - see
+-- the RLS policies below, which OR in a follows check alongside the
+-- existing friendship check rather than replacing it.
+create table follows (
+  follower_id uuid not null references profiles(id) on delete cascade,
+  followee_id uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower_id, followee_id),
+  constraint no_self_follow check (follower_id <> followee_id)
+);
+
+create index idx_follows_follower on follows (follower_id);
+create index idx_follows_followee on follows (followee_id);
+
 -- ---------- rate limiting ----------
 -- Generic sliding-window limiter usable from any RPC or trigger.
 -- Real enforcement lives here (server-side); src/lib/rateLimiter.js on the
@@ -254,10 +272,27 @@ alter table profiles enable row level security;
 alter table applications enable row level security;
 alter table stage_history enable row level security;
 alter table friendships enable row level security;
+alter table follows enable row level security;
 alter table rate_limit_log enable row level security;
 alter table rate_limit_log_anon enable row level security;
 
--- profiles: readable by the owner, or by an accepted friend
+-- follows: follower/following lists are public-ish info (same as Instagram
+-- showing anyone's followers list), so any signed-in user can read the
+-- whole graph, not just their own edges; only the follower can create or
+-- remove their own edge.
+create policy "follows_select_all"
+  on follows for select
+  using (true);
+
+create policy "follows_insert_self"
+  on follows for insert
+  with check (follower_id = auth.uid());
+
+create policy "follows_delete_self"
+  on follows for delete
+  using (follower_id = auth.uid());
+
+-- profiles: readable by the owner, by an accepted friend, or by anyone who follows them
 create policy "profiles_select_own_or_friend"
   on profiles for select
   using (
@@ -267,6 +302,9 @@ create policy "profiles_select_own_or_friend"
       where f.status = 'accepted'
         and ((f.requester_id = auth.uid() and f.addressee_id = profiles.id)
           or (f.addressee_id = auth.uid() and f.requester_id = profiles.id))
+    )
+    or exists (
+      select 1 from follows fo where fo.follower_id = auth.uid() and fo.followee_id = profiles.id
     )
   );
 
@@ -294,6 +332,9 @@ create policy "applications_select_friend_heatmap"
         and ((f.requester_id = auth.uid() and f.addressee_id = applications.user_id)
           or (f.addressee_id = auth.uid() and f.requester_id = applications.user_id))
     )
+    or exists (
+      select 1 from follows fo where fo.follower_id = auth.uid() and fo.followee_id = applications.user_id
+    )
   );
 
 -- stage_history: full read/write for the owner (used for the owner's own
@@ -315,6 +356,9 @@ create policy "stage_history_select_friend"
       where f.status = 'accepted'
         and ((f.requester_id = auth.uid() and f.addressee_id = stage_history.user_id)
           or (f.addressee_id = auth.uid() and f.requester_id = stage_history.user_id))
+    )
+    or exists (
+      select 1 from follows fo where fo.follower_id = auth.uid() and fo.followee_id = stage_history.user_id
     )
   );
 
@@ -378,6 +422,11 @@ create policy "resumes_owner_or_friend_read"
         where f.status = 'accepted'
           and (storage.foldername(name))[1] = f.addressee_id::text
           and f.requester_id = auth.uid()
+      )
+      or exists (
+        select 1 from follows fo
+        where fo.follower_id = auth.uid()
+          and fo.followee_id::text = (storage.foldername(name))[1]
       )
     )
   );

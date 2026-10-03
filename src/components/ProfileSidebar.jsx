@@ -3,8 +3,33 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useProfileContext } from '../context/ProfileContext.jsx';
 import { useViewedProfile } from '../context/ViewedProfileContext.jsx';
+import { useFollowStats } from '../hooks/useFollowStats.js';
 import { getResumeSignedUrl, uploadResume } from '../utils/resume.js';
 import DefaultAvatar from './DefaultAvatar.jsx';
+import FollowersModal from './FollowersModal.jsx';
+
+// Small shared row: "123 followers" / "456 following" as two buttons that
+// open the followers/following modal scoped to whichever profile this
+// sidebar is showing - used by both the own-profile and viewed-profile cards
+// so the same Instagram-style browsing works either way.
+function FollowCounts({ userId, followers, following }) {
+  const [modal, setModal] = useState(null); // 'followers' | 'following' | null
+  return (
+    <>
+      <div className="mt-3 flex justify-center gap-4 border-y border-grid py-2.5 text-sm">
+        <button onClick={() => setModal('followers')} className="hover:underline">
+          <span className="font-semibold text-paper">{followers}</span>{' '}
+          <span className="text-ink2">follower{followers === 1 ? '' : 's'}</span>
+        </button>
+        <button onClick={() => setModal('following')} className="hover:underline">
+          <span className="font-semibold text-paper">{following}</span>{' '}
+          <span className="text-ink2">following</span>
+        </button>
+      </div>
+      {modal && <FollowersModal userId={userId} initialTab={modal} onClose={() => setModal(null)} />}
+    </>
+  );
+}
 
 const ASIDE_CLASS = 'hidden w-96 flex-shrink-0 lg:block';
 
@@ -44,6 +69,10 @@ function ViewedProfileCard({ viewed }) {
 
   const { profile, resumeUrl } = viewed;
   const displayName = profile.full_name || profile.username;
+  const { user } = useAuth();
+  const { followers, following, amFollowing, loading: statsLoading, busy, follow, unfollow } =
+    useFollowStats(profile.id);
+  const isSelf = user?.id === profile.id;
 
   return (
     <aside className={ASIDE_CLASS}>
@@ -64,6 +93,18 @@ function ViewedProfileCard({ viewed }) {
           <p className="mt-3 font-display text-lg font-semibold leading-tight">{displayName}</p>
           <p className="text-sm text-ink2">@{profile.username}</p>
           {profile.school && <p className="mt-1 text-xs text-ink2">{profile.school}</p>}
+
+          <FollowCounts userId={profile.id} followers={followers} following={following} />
+
+          {!isSelf && (
+            <button
+              onClick={() => (amFollowing ? unfollow() : follow())}
+              disabled={statsLoading || busy}
+              className={amFollowing ? 'btn-secondary mt-3 w-full text-xs' : 'btn-primary mt-3 w-full text-xs'}
+            >
+              {busy ? '…' : amFollowing ? 'Following' : 'Follow'}
+            </button>
+          )}
 
           {(profile.linkedin_url || profile.github_url) && (
             <div className="mt-3 flex justify-center gap-3 text-xs">
@@ -185,16 +226,7 @@ function OwnProfileCard() {
           <p className="text-sm text-ink2">@{profile.username}</p>
           {profile.school && <p className="mt-1 text-xs text-ink2">{profile.school}</p>}
 
-          <div className="mt-3 flex justify-center gap-4 border-y border-grid py-2.5 text-sm">
-            <span>
-              <span className="font-semibold text-paper">{followers}</span>{' '}
-              <span className="text-ink2">follower{followers === 1 ? '' : 's'}</span>
-            </span>
-            <span>
-              <span className="font-semibold text-paper">{following}</span>{' '}
-              <span className="text-ink2">following</span>
-            </span>
-          </div>
+          <FollowCounts userId={user.id} followers={followers} following={following} />
 
           {(profile.linkedin_url || profile.github_url) && (
             <div className="mt-3 flex justify-center gap-3 text-xs">
