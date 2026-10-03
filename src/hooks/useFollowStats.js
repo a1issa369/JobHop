@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSocialGraph } from '../context/SocialGraphContext.jsx';
@@ -20,6 +20,12 @@ export function useFollowStats(targetUserId) {
   const [amFollowing, setAmFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  // Synchronous guard against a double-click firing two concurrent
+  // follow/unfollow mutations before `busy` (React state) re-renders the
+  // disabled button. `follows` also has a DB-level primary key on
+  // (follower_id, followee_id) as a last-resort safety net, but this stops
+  // the duplicate request from ever being sent in the first place.
+  const inFlightRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!targetUserId) return;
@@ -55,11 +61,14 @@ export function useFollowStats(targetUserId) {
 
   async function follow() {
     if (!user || !targetUserId || user.id === targetUserId) return;
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setBusy(true);
     const { error } = await supabase
       .from('follows')
       .insert({ follower_id: user.id, followee_id: targetUserId });
     setBusy(false);
+    inFlightRef.current = false;
     if (!error) {
       setAmFollowing(true);
       setFollowers((f) => f + 1);
@@ -70,6 +79,8 @@ export function useFollowStats(targetUserId) {
 
   async function unfollow() {
     if (!user || !targetUserId) return;
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setBusy(true);
     const { error } = await supabase
       .from('follows')
@@ -77,6 +88,7 @@ export function useFollowStats(targetUserId) {
       .eq('follower_id', user.id)
       .eq('followee_id', targetUserId);
     setBusy(false);
+    inFlightRef.current = false;
     if (!error) {
       setAmFollowing(false);
       setFollowers((f) => Math.max(0, f - 1));

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import CalendarHeatmap from '../components/CalendarHeatmap.jsx';
 import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
@@ -45,12 +45,28 @@ export default function ViewedOverview() {
     };
   }, [profile.id]);
 
-  if (loading) return <p className="text-sm text-ink2">Loading…</p>;
+  const backLink = (
+    <Link to="/friends" className="text-sm text-ink2 hover:text-signal">
+      ← Back to friends
+    </Link>
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <p className="text-sm text-ink2">Loading…</p>
+      </div>
+    );
+  }
 
   if (applications.length === 0 && isInActiveDuel) {
     return (
-      <div className="card-surface p-6 text-center text-sm text-ink2">
-        Activity is hidden for the duration of your duel - check back once it ends.
+      <div className="space-y-6">
+        {backLink}
+        <div className="card-surface p-6 text-center text-sm text-ink2">
+          Activity is hidden for the duration of your duel - check back once it ends.
+        </div>
       </div>
     );
   }
@@ -63,6 +79,7 @@ export default function ViewedOverview() {
 
   return (
     <div className="space-y-6">
+      {backLink}
       <MonthlyStats applications={applications} />
       <CalendarHeatmap applicationsByDate={applicationsByDate} />
       <SankeyFlowChart applications={applications} stageHistory={stageHistory} />

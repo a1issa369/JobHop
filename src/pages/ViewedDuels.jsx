@@ -66,7 +66,16 @@ export default function ViewedDuels() {
     };
   }, [profile.id]);
 
-  if (loading) return <p className="text-sm text-ink2">Loading…</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Link to={`/friends/${profile.id}`} className="text-sm text-ink2 hover:text-signal">
+          ← Back to profile
+        </Link>
+        <p className="text-sm text-ink2">Loading…</p>
+      </div>
+    );
+  }
 
   const active = challenges.filter((c) => c.status === 'active');
   const history = challenges.filter((c) => c.status === 'completed');
@@ -74,6 +83,10 @@ export default function ViewedDuels() {
 
   return (
     <div className="space-y-8">
+      <Link to={`/friends/${profile.id}`} className="text-sm text-ink2 hover:text-signal">
+        ← Back to profile
+      </Link>
+
       <div>
         <h1 className="font-display text-2xl font-semibold">{displayName}'s duels</h1>
       </div>

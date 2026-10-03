@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSocialGraph } from '../context/SocialGraphContext.jsx';
@@ -22,6 +22,9 @@ export function useFriendStatus(targetId) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Same synchronous double-click guard as useFollowStats - checked before
+  // `busy` (React state) has a chance to re-render the disabled button.
+  const inFlightRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!user || !targetId || targetId === user.id) {
@@ -58,6 +61,8 @@ export function useFriendStatus(targetId) {
   }, [refresh, version]);
 
   async function sendRequest() {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setBusy(true);
     setError('');
     try {
@@ -70,13 +75,19 @@ export function useFriendStatus(targetId) {
       await refresh();
       bump();
     } catch (err) {
+      // Includes a duplicate request the DB rejected outright - still
+      // surfaced rather than swallowed, so a fast double-click doesn't look
+      // like nothing happened.
       setError(err instanceof RateLimitError ? err.message : err.message);
     }
     setBusy(false);
+    inFlightRef.current = false;
   }
 
   async function respond(accept) {
     if (!friendshipId) return;
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setBusy(true);
     await supabase
       .from('friendships')
@@ -85,6 +96,7 @@ export function useFriendStatus(targetId) {
     await refresh();
     bump();
     setBusy(false);
+    inFlightRef.current = false;
   }
 
   return { status, loading, busy, error, sendRequest, respond };

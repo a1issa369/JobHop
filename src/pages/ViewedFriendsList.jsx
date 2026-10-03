@@ -40,6 +40,10 @@ export default function ViewedFriendsList() {
 
   return (
     <div className="space-y-6">
+      <Link to={`/friends/${profile.id}`} className="text-sm text-ink2 hover:text-signal">
+        ← Back to profile
+      </Link>
+
       <div>
         <h1 className="font-display text-2xl font-semibold">{profile.full_name || profile.username}'s friends</h1>
       </div>

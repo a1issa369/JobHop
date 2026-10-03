@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Outlet, Link } from 'react-router-dom';
+import { useParams, Outlet } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useViewedProfile } from '../context/ViewedProfileContext.jsx';
 import { getResumeSignedUrl } from '../utils/resume.js';
@@ -61,12 +61,9 @@ export default function FriendProfile() {
   if (state.loading) return <p className="text-ink2">Loading profile…</p>;
   if (state.error) return <p className="text-bad">{state.error}</p>;
 
-  return (
-    <div className="space-y-6">
-      <Link to="/friends" className="text-sm text-ink2 hover:text-signal">
-        ← Back to friends
-      </Link>
-      <Outlet context={{ profile: state.profile, isInActiveDuel }} />
-    </div>
-  );
+  // The back link itself lives on each tab, not here - "← Back to friends"
+  // (to your own friends list) on the Overview tab, "← Back to profile" (to
+  // this person's Overview) on Board/Friends/Duels, since that distinction
+  // depends on which tab is active, which this layout doesn't track.
+  return <Outlet context={{ profile: state.profile, isInActiveDuel }} />;
 }

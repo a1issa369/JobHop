@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSocialGraph } from '../context/SocialGraphContext.jsx';
@@ -17,11 +17,16 @@ export default function Friends() {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
-  const [friends, setFriends] = useState([]);
   const [pending, setPending] = useState([]);
   const [error, setError] = useState('');
   const debounceRef = useRef(null);
   const boxRef = useRef(null);
+  // Synchronous in-flight guard: a Set checked and updated BEFORE any state
+  // or network call, so a fast double-click can't fire two concurrent
+  // requests for the same person/friendship. React state (e.g. `busy`) only
+  // disables a button after a re-render, which is too late to stop a second
+  // click that lands in the same tick.
+  const inFlightRef = useRef(new Set());
 
   async function loadFriends() {
     const { data } = await supabase
@@ -29,25 +34,21 @@ export default function Friends() {
       .select('id, status, requester_id, addressee_id, requester:requester_id(username, full_name, avatar_url), addressee:addressee_id(username, full_name, avatar_url)')
       .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
 
-    const accepted = [];
     const incoming = [];
     for (const f of data ?? []) {
       const otherIsRequester = f.requester_id === user.id;
       const otherProfile = otherIsRequester ? f.addressee : f.requester;
       const otherId = otherIsRequester ? f.addressee_id : f.requester_id;
-      if (f.status === 'accepted') {
-        accepted.push({ id: otherId, ...otherProfile });
-      } else if (f.status === 'pending' && f.addressee_id === user.id) {
+      if (f.status === 'pending' && f.addressee_id === user.id) {
         incoming.push({ friendshipId: f.id, id: otherId, ...otherProfile });
       }
     }
-    setFriends(accepted);
     setPending(incoming);
   }
 
   // Also re-fetches on every social graph `version` bump, so accepting or
   // declining a request from the viewed-profile sidebar (not just from this
-  // page) updates the Pending requests / Your friends lists here too.
+  // page) updates the Pending requests list here too.
   useEffect(() => {
     loadFriends();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,6 +87,8 @@ export default function Friends() {
   }, [query]);
 
   async function sendRequest(addresseeId) {
+    if (inFlightRef.current.has(addresseeId)) return;
+    inFlightRef.current.add(addresseeId);
     try {
       const { error: reqErr } = await withRateLimit(
         `friend_request:${user.id}`,
@@ -101,14 +104,24 @@ export default function Friends() {
       setResults((r) => r.filter((p) => p.id !== addresseeId));
       bump();
     } catch (err) {
+      // A duplicate request blocked by the DB's unique constraint lands
+      // here too - still worth surfacing rather than silently doing nothing.
       setError(err instanceof RateLimitError ? err.message : err.message);
+    } finally {
+      inFlightRef.current.delete(addresseeId);
     }
   }
 
   async function respond(friendshipId, status) {
-    await supabase.from('friendships').update({ status }).eq('id', friendshipId);
-    loadFriends();
-    bump();
+    if (inFlightRef.current.has(friendshipId)) return;
+    inFlightRef.current.add(friendshipId);
+    try {
+      await supabase.from('friendships').update({ status }).eq('id', friendshipId);
+      await loadFriends();
+      bump();
+    } finally {
+      inFlightRef.current.delete(friendshipId);
+    }
   }
 
   return (
@@ -199,30 +212,6 @@ export default function Friends() {
           </ul>
         </section>
       )}
-
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-ink2">Your friends</h2>
-        {friends.length === 0 ? (
-          <p className="text-sm text-ink2">No friends yet - search above to add some.</p>
-        ) : (
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {friends.map((f) => (
-              <li key={f.id}>
-                <Link
-                  to={`/friends/${f.id}`}
-                  className="card-surface flex items-center gap-3 p-3 hover:border-signal"
-                >
-                  <Avatar url={f.avatar_url} size={32} />
-                  <span className="min-w-0">
-                    <p className="truncate text-sm font-semibold leading-tight">{f.full_name || f.username}</p>
-                    <p className="truncate text-xs text-ink2">@{f.username}</p>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }

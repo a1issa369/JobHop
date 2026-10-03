@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -27,8 +27,13 @@ export default function FollowListPanel({ userId, initialTab = 'followers' }) {
   const [myFollowing, setMyFollowing] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [query, setQuery] = useState('');
   const [busyId, setBusyId] = useState(null);
+  // Synchronous guard so a fast double-click on the same row's Follow/
+  // Unfollow button can't fire two concurrent mutations before `busyId`
+  // (React state) re-renders the disabled button.
+  const inFlightRef = useRef(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -81,31 +86,45 @@ export default function FollowListPanel({ userId, initialTab = 'followers' }) {
 
   async function toggleFollow(personId) {
     if (!user || personId === user.id) return;
+    if (inFlightRef.current.has(personId)) return;
+    inFlightRef.current.add(personId);
     setBusyId(personId);
-    if (myFollowing.has(personId)) {
-      const { error: delErr } = await supabase
-        .from('follows')
-        .delete()
-        .eq('follower_id', user.id)
-        .eq('followee_id', personId);
-      if (!delErr) {
-        setMyFollowing((prev) => {
-          const next = new Set(prev);
-          next.delete(personId);
-          return next;
-        });
-        bump();
+    setActionError('');
+    try {
+      if (myFollowing.has(personId)) {
+        const { error: delErr } = await supabase
+          .from('follows')
+          .delete()
+          .eq('follower_id', user.id)
+          .eq('followee_id', personId);
+        if (!delErr) {
+          setMyFollowing((prev) => {
+            const next = new Set(prev);
+            next.delete(personId);
+            return next;
+          });
+          bump();
+        } else {
+          setActionError(delErr.message);
+        }
+      } else {
+        const { error: insErr } = await supabase
+          .from('follows')
+          .insert({ follower_id: user.id, followee_id: personId });
+        if (!insErr) {
+          setMyFollowing((prev) => new Set(prev).add(personId));
+          bump();
+        } else {
+          // A duplicate insert blocked by the follows table's primary key
+          // (follower_id, followee_id) lands here too - surface it rather
+          // than silently doing nothing, so a fast double-click is visible.
+          setActionError(insErr.message);
+        }
       }
-    } else {
-      const { error: insErr } = await supabase
-        .from('follows')
-        .insert({ follower_id: user.id, followee_id: personId });
-      if (!insErr) {
-        setMyFollowing((prev) => new Set(prev).add(personId));
-        bump();
-      }
+    } finally {
+      inFlightRef.current.delete(personId);
+      setBusyId(null);
     }
-    setBusyId(null);
   }
 
   return (
@@ -137,6 +156,10 @@ export default function FollowListPanel({ userId, initialTab = 'followers' }) {
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
+
+      {actionError && (
+        <p className="border-b border-grid px-4 py-2 text-xs text-bad">{actionError}</p>
+      )}
 
       <div className="max-h-96 overflow-y-auto">
         {loading && <p className="p-5 text-center text-sm text-ink2">Loading…</p>}

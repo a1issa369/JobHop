@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { format, isPast, parseISO } from 'date-fns';
 import { supabase } from '../lib/supabaseClient';
 import { STAGES, STAGE_MAP, WORK_TYPE_MAP } from '../utils/stageConfig';
@@ -140,18 +140,35 @@ export default function ViewedBoard() {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
-  if (loading) return <p className="text-sm text-ink2">Loading board…</p>;
+  const backLink = (
+    <Link to={`/friends/${profile.id}`} className="mb-4 inline-block text-sm text-ink2 hover:text-signal">
+      ← Back to profile
+    </Link>
+  );
+
+  if (loading) {
+    return (
+      <div>
+        {backLink}
+        <p className="text-sm text-ink2">Loading board…</p>
+      </div>
+    );
+  }
 
   if (applications.length === 0 && isInActiveDuel) {
     return (
-      <div className="card-surface p-6 text-center text-sm text-ink2">
-        This board is hidden for the duration of your duel - check back once it ends.
+      <div>
+        {backLink}
+        <div className="card-surface p-6 text-center text-sm text-ink2">
+          This board is hidden for the duration of your duel - check back once it ends.
+        </div>
       </div>
     );
   }
 
   return (
     <div>
+      {backLink}
       <div className="mb-4">
         <h1 className="font-display text-2xl font-semibold">
           {(profile.full_name || profile.username)}'s board
