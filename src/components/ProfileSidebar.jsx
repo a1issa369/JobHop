@@ -133,7 +133,9 @@ function ViewedProfileCard({ viewed }) {
           )}
         </div>
 
-        {!isSelf && <ChallengeWidget targetId={profile.id} targetName={displayName} />}
+        {!isSelf && (
+          <ChallengeWidget targetId={profile.id} targetName={displayName} targetAvatar={profile.avatar_url} />
+        )}
 
         {/* Entirely absent (not even a placeholder) if they haven't
             uploaded a resume - nothing to show, so nothing is shown. */}

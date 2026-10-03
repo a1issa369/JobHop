@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useProfileContext } from '../context/ProfileContext.jsx';
 import { useChallenges } from '../hooks/useChallenges.js';
+import DuelVersus from '../components/DuelVersus.jsx';
 
 function otherParty(challenge, userId) {
   return challenge.challenger_id === userId ? challenge.opponent : challenge.challenger;
@@ -16,12 +18,39 @@ function timeLeft(endsAt) {
   return `${hours}h ${mins}m left`;
 }
 
-function Row({ children }) {
-  return <li className="card-surface flex items-center justify-between gap-3 p-3">{children}</li>;
+// One shared card shell for every duel, styled to this list's needs: a
+// quiet border by default, and an accent border + soft glow only for the
+// states that actually need attention (an incoming request, a duel that's
+// live right now) - history fades back to quiet since it's already settled.
+function DuelCard({ accent, children }) {
+  const accentClass =
+    accent === 'signal'
+      ? 'border-signal/40 bg-signal/5'
+      : accent === 'route'
+        ? 'border-route/40 bg-route/5'
+        : 'border-grid/60';
+  return <li className={`card-surface flex items-center gap-4 border p-4 ${accentClass}`}>{children}</li>;
+}
+
+function OutcomeBadge({ outcome }) {
+  const styles = {
+    Won: 'bg-good/15 text-good',
+    Lost: 'bg-bad/15 text-bad',
+    Draw: 'bg-ink2/15 text-ink2',
+    declined: 'bg-ink2/15 text-ink2',
+    cancelled: 'bg-ink2/15 text-ink2'
+  };
+  const label = { declined: 'Declined', cancelled: 'Cancelled' }[outcome] ?? outcome;
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[outcome] ?? 'bg-ink2/15 text-ink2'}`}>
+      {label}
+    </span>
+  );
 }
 
 export default function Challenges() {
   const { user } = useAuth();
+  const { profile: myProfile } = useProfileContext();
   const { incoming, outgoing, active, history, loading, error, respond, cancel } = useChallenges();
 
   if (loading) return <p className="text-sm text-ink2">Loading…</p>;
@@ -29,31 +58,34 @@ export default function Challenges() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-semibold">Challenges</h1>
+        <h1 className="font-display text-2xl font-semibold">Duels</h1>
         <p className="text-sm text-ink2">
-          Race a friend over 1-7 days - whoever submits more applications wins.
+          Challenge a friend to 1-7 days of applying - whoever submits more wins.
         </p>
       </div>
 
       {error && <p className="text-sm text-bad">{error}</p>}
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-ink2">Incoming requests</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ink2">Duel requests</h2>
         {incoming.length === 0 ? (
-          <p className="text-sm text-ink2">No pending challenges from anyone.</p>
+          <p className="text-sm text-ink2">No one's challenged you right now.</p>
         ) : (
           <ul className="space-y-2">
             {incoming.map((c) => {
               const other = otherParty(c, user.id);
               return (
-                <Row key={c.id}>
-                  <Link to={`/friends/${other.id}`} className="font-medium hover:text-signal">
-                    {other.full_name || other.username}
-                  </Link>
-                  <span className="text-xs text-ink2">
-                    {c.duration_days} day{c.duration_days === 1 ? '' : 's'}
-                  </span>
-                  <div className="flex gap-2">
+                <DuelCard key={c.id} accent="signal">
+                  <DuelVersus leftUrl={myProfile?.avatar_url} rightUrl={other.avatar_url} />
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/friends/${other.id}`} className="font-medium hover:text-signal">
+                      {other.full_name || other.username}
+                    </Link>
+                    <p className="text-xs text-ink2">
+                      wants a {c.duration_days}-day duel
+                    </p>
+                  </div>
+                  <div className="flex flex-shrink-0 gap-2">
                     <button onClick={() => respond(c.id, true)} className="btn-primary text-xs">
                       Accept
                     </button>
@@ -61,7 +93,7 @@ export default function Challenges() {
                       Decline
                     </button>
                   </div>
-                </Row>
+                </DuelCard>
               );
             })}
           </ul>
@@ -69,25 +101,28 @@ export default function Challenges() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-ink2">Sent, waiting on a response</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ink2">Awaiting response</h2>
         {outgoing.length === 0 ? (
-          <p className="text-sm text-ink2">Nothing pending.</p>
+          <p className="text-sm text-ink2">Nothing sent out right now.</p>
         ) : (
           <ul className="space-y-2">
             {outgoing.map((c) => {
               const other = otherParty(c, user.id);
               return (
-                <Row key={c.id}>
-                  <Link to={`/friends/${other.id}`} className="font-medium hover:text-signal">
-                    {other.full_name || other.username}
-                  </Link>
-                  <span className="text-xs text-ink2">
-                    {c.duration_days} day{c.duration_days === 1 ? '' : 's'}
-                  </span>
-                  <button onClick={() => cancel(c.id)} className="btn-secondary text-xs">
+                <DuelCard key={c.id}>
+                  <DuelVersus leftUrl={myProfile?.avatar_url} rightUrl={other.avatar_url} />
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/friends/${other.id}`} className="font-medium hover:text-signal">
+                      {other.full_name || other.username}
+                    </Link>
+                    <p className="text-xs text-ink2">
+                      {c.duration_days}-day duel · waiting on them
+                    </p>
+                  </div>
+                  <button onClick={() => cancel(c.id)} className="btn-secondary flex-shrink-0 text-xs">
                     Cancel
                   </button>
-                </Row>
+                </DuelCard>
               );
             })}
           </ul>
@@ -95,20 +130,28 @@ export default function Challenges() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-ink2">Active</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ink2">Live duels</h2>
         {active.length === 0 ? (
-          <p className="text-sm text-ink2">No challenges in progress.</p>
+          <p className="text-sm text-ink2">Nothing in progress.</p>
         ) : (
           <ul className="space-y-2">
             {active.map((c) => {
               const other = otherParty(c, user.id);
               return (
-                <Row key={c.id}>
-                  <Link to={`/friends/${other.id}`} className="font-medium hover:text-signal">
-                    {other.full_name || other.username}
-                  </Link>
-                  <span className="text-xs text-ink2">{timeLeft(c.ends_at)}</span>
-                </Row>
+                <DuelCard key={c.id} accent="route">
+                  <DuelVersus leftUrl={myProfile?.avatar_url} rightUrl={other.avatar_url} />
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/friends/${other.id}`} className="font-medium hover:text-signal">
+                      {other.full_name || other.username}
+                    </Link>
+                    <p className="flex items-center gap-1.5 text-xs text-route">
+                      <span className="relative inline-block h-1.5 w-1.5 rounded-full bg-route">
+                        <span className="absolute inset-0 animate-ping rounded-full bg-route" />
+                      </span>
+                      {timeLeft(c.ends_at)}
+                    </p>
+                  </div>
+                </DuelCard>
               );
             })}
           </ul>
@@ -116,11 +159,11 @@ export default function Challenges() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-ink2">History</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ink2">Past duels</h2>
         {history.length === 0 ? (
-          <p className="text-sm text-ink2">No finished challenges yet.</p>
+          <p className="text-sm text-ink2">No finished duels yet.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-2 opacity-90">
             {history.map((c) => {
               const other = otherParty(c, user.id);
               const mine = c.challenger_id === user.id ? c.challenger_count : c.opponent_count;
@@ -133,20 +176,21 @@ export default function Challenges() {
                     : c.winner_id === null
                       ? 'Draw'
                       : 'Lost';
-              const color =
-                outcome === 'Won' ? 'text-good' : outcome === 'Lost' ? 'text-bad' : 'text-ink2';
               return (
-                <Row key={c.id}>
-                  <Link to={`/friends/${other.id}`} className="font-medium hover:text-signal">
-                    {other.full_name || other.username}
-                  </Link>
-                  {c.status === 'completed' && (
-                    <span className="text-xs text-ink2">
-                      {mine} - {theirs}
-                    </span>
-                  )}
-                  <span className={`text-xs font-semibold ${color}`}>{outcome}</span>
-                </Row>
+                <DuelCard key={c.id}>
+                  <DuelVersus leftUrl={myProfile?.avatar_url} rightUrl={other.avatar_url} />
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/friends/${other.id}`} className="font-medium hover:text-signal">
+                      {other.full_name || other.username}
+                    </Link>
+                    {c.status === 'completed' && (
+                      <p className="text-xs text-ink2">
+                        {mine} - {theirs}
+                      </p>
+                    )}
+                  </div>
+                  <OutcomeBadge outcome={outcome} />
+                </DuelCard>
               );
             })}
           </ul>
