@@ -5,6 +5,7 @@ import { useProfileContext } from '../context/ProfileContext.jsx';
 import { useViewedProfile } from '../context/ViewedProfileContext.jsx';
 import { useFollowStats } from '../hooks/useFollowStats.js';
 import { getResumeSignedUrl, uploadResume } from '../utils/resume.js';
+import ChallengeWidget from './ChallengeWidget.jsx';
 import DefaultAvatar from './DefaultAvatar.jsx';
 import FollowersModal from './FollowersModal.jsx';
 
@@ -131,6 +132,8 @@ function ViewedProfileCard({ viewed }) {
             </div>
           )}
         </div>
+
+        {!isSelf && <ChallengeWidget targetId={profile.id} targetName={displayName} />}
 
         {/* Entirely absent (not even a placeholder) if they haven't
             uploaded a resume - nothing to show, so nothing is shown. */}

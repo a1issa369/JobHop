@@ -59,6 +59,9 @@ export default function Navbar() {
           <NavLink to="/friends" className={linkClass}>
             Friends
           </NavLink>
+          <NavLink to="/challenges" className={linkClass}>
+            Challenges
+          </NavLink>
           <NavLink to="/settings" className={linkClass}>
             Settings
           </NavLink>

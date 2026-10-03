@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Friends from './pages/Friends.jsx';
 import FriendProfile from './pages/FriendProfile.jsx';
 import Profile from './pages/Profile.jsx';
+import Challenges from './pages/Challenges.jsx';
 import Settings from './pages/Settings.jsx';
 
 function Protected({ children }) {
@@ -80,6 +81,14 @@ export default function App() {
         element={
           <Protected>
             <Profile />
+          </Protected>
+        }
+      />
+      <Route
+        path="/challenges"
+        element={
+          <Protected>
+            <Challenges />
           </Protected>
         }
       />

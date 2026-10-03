@@ -54,11 +54,11 @@ export default function Profile() {
         <p className="text-sm text-ink2">Your activity and application flow for the year.</p>
       </div>
 
+      <MonthlyStats applications={applications} own />
+
       <CalendarHeatmap applicationsByDate={applicationsByDate} />
 
       <SankeyFlowChart applications={applications} stageHistory={stageHistory} />
-
-      <MonthlyStats applications={applications} />
     </div>
   );
 }

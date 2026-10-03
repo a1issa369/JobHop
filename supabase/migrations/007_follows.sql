@@ -6,7 +6,7 @@
 -- friendship already does - this migration extends those existing RLS
 -- policies with an OR'd follows check rather than replacing them.
 
-create table follows (
+create table if not exists follows (
   follower_id uuid not null references profiles(id) on delete cascade,
   followee_id uuid not null references profiles(id) on delete cascade,
   created_at timestamptz not null default now(),
@@ -14,22 +14,25 @@ create table follows (
   constraint no_self_follow check (follower_id <> followee_id)
 );
 
-create index idx_follows_follower on follows (follower_id);
-create index idx_follows_followee on follows (followee_id);
+create index if not exists idx_follows_follower on follows (follower_id);
+create index if not exists idx_follows_followee on follows (followee_id);
 
 alter table follows enable row level security;
 
 -- Follower/following lists are public-ish info (same as Instagram showing
 -- anyone's followers list), so any signed-in user can read the whole
 -- graph, not just their own edges.
+drop policy if exists "follows_select_all" on follows;
 create policy "follows_select_all"
   on follows for select
   using (true);
 
+drop policy if exists "follows_insert_self" on follows;
 create policy "follows_insert_self"
   on follows for insert
   with check (follower_id = auth.uid());
 
+drop policy if exists "follows_delete_self" on follows;
 create policy "follows_delete_self"
   on follows for delete
   using (follower_id = auth.uid());

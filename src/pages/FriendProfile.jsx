@@ -84,11 +84,11 @@ export default function FriendProfile() {
         ← Back to friends
       </Link>
 
+      <MonthlyStats applications={applications} />
+
       <CalendarHeatmap applicationsByDate={applicationsByDate} />
 
       <SankeyFlowChart applications={applications} stageHistory={stageHistory} />
-
-      <MonthlyStats applications={applications} />
     </div>
   );
 }
