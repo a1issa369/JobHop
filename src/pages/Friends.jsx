@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
 import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
 import Avatar from '../components/Avatar.jsx';
+import FollowListPanel from '../components/FollowListPanel.jsx';
 import IconUserPlus from '../components/IconUserPlus.jsx';
 
 export default function Friends() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -22,7 +24,7 @@ export default function Friends() {
   async function loadFriends() {
     const { data } = await supabase
       .from('friendships')
-      .select('id, status, requester_id, addressee_id, requester:requester_id(username, avatar_url), addressee:addressee_id(username, avatar_url)')
+      .select('id, status, requester_id, addressee_id, requester:requester_id(username, full_name, avatar_url), addressee:addressee_id(username, full_name, avatar_url)')
       .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
 
     const accepted = [];
@@ -56,12 +58,10 @@ export default function Friends() {
   }, []);
 
   // Live search as you type, debounced so each keystroke doesn't fire its
-  // own query. Goes through the search_profiles RPC rather than a direct
-  // `.from('profiles')` select - profile rows are RLS-gated to people
-  // you're already friends with or following, so a plain select would
-  // silently return nothing for anyone you haven't met yet. The RPC is a
-  // deliberate, narrow exception: username/name/avatar only, for exactly
-  // this directory-style search.
+  // own query. Goes through the search_profiles RPC (narrow, username/name/
+  // avatar only) rather than a direct `.from('profiles')` select, purely
+  // because it's a nicer ilike-ranked lookup - profiles themselves are
+  // fully public now, so this isn't working around RLS the way it used to.
   useEffect(() => {
     clearTimeout(debounceRef.current);
     if (!query.trim()) {
@@ -163,13 +163,16 @@ export default function Friends() {
 
       {error && <p className="text-sm text-bad">{error}</p>}
 
+      <FollowListPanel userId={user.id} initialTab={searchParams.get('tab') === 'following' ? 'following' : 'followers'} />
+
       {pending.length > 0 && (
         <section>
           <h2 className="mb-2 text-sm font-semibold text-ink2">Pending requests</h2>
           <ul className="space-y-2">
             {pending.map((p) => (
-              <li key={p.friendshipId} className="card-surface flex items-center justify-between p-3">
-                <span>{p.username}</span>
+              <li key={p.friendshipId} className="card-surface flex items-center gap-3 p-3">
+                <Avatar url={p.avatar_url} size={32} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.full_name || p.username}</span>
                 <div className="flex gap-2">
                   <button
                     onClick={() => respond(p.friendshipId, 'accepted')}
@@ -195,14 +198,18 @@ export default function Friends() {
         {friends.length === 0 ? (
           <p className="text-sm text-ink2">No friends yet — search above to add some.</p>
         ) : (
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {friends.map((f) => (
               <li key={f.id}>
                 <Link
                   to={`/friends/${f.id}`}
-                  className="card-surface block p-3 hover:border-signal"
+                  className="card-surface flex items-center gap-3 p-3 hover:border-signal"
                 >
-                  {f.username}
+                  <Avatar url={f.avatar_url} size={32} />
+                  <span className="min-w-0">
+                    <p className="truncate text-sm font-semibold leading-tight">{f.full_name || f.username}</p>
+                    <p className="truncate text-xs text-ink2">@{f.username}</p>
+                  </span>
                 </Link>
               </li>
             ))}

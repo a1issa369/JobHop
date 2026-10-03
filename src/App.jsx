@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import { ProfileProvider } from './context/ProfileContext.jsx';
 import { ViewedProfileProvider } from './context/ViewedProfileContext.jsx';
+import { NotificationsProvider } from './context/NotificationsContext.jsx';
 import Navbar from './components/Navbar.jsx';
 import ProfileSidebar from './components/ProfileSidebar.jsx';
 import Login from './pages/Login.jsx';
@@ -11,9 +12,14 @@ import ResetPassword from './pages/ResetPassword.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Friends from './pages/Friends.jsx';
 import FriendProfile from './pages/FriendProfile.jsx';
+import ViewedOverview from './pages/ViewedOverview.jsx';
+import ViewedBoard from './pages/ViewedBoard.jsx';
+import ViewedFriendsList from './pages/ViewedFriendsList.jsx';
+import ViewedDuels from './pages/ViewedDuels.jsx';
 import Profile from './pages/Profile.jsx';
 import Challenges from './pages/Challenges.jsx';
 import Settings from './pages/Settings.jsx';
+import Notifications from './pages/Notifications.jsx';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -75,7 +81,12 @@ export default function App() {
             <FriendProfile />
           </Protected>
         }
-      />
+      >
+        <Route index element={<ViewedOverview />} />
+        <Route path="board" element={<ViewedBoard />} />
+        <Route path="friends" element={<ViewedFriendsList />} />
+        <Route path="duels" element={<ViewedDuels />} />
+      </Route>
       <Route
         path="/profile"
         element={
@@ -100,6 +111,14 @@ export default function App() {
           </Protected>
         }
       />
+      <Route
+        path="/notifications"
+        element={
+          <Protected>
+            <Notifications />
+          </Protected>
+        }
+      />
     </Routes>
   );
 
@@ -117,11 +136,13 @@ export default function App() {
     <div className="min-h-screen">
       <ViewedProfileProvider>
         <ProfileProvider userId={user.id}>
-          <Navbar />
-          <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
-            <ProfileSidebar />
-            <div className="min-w-0 flex-1">{routes}</div>
-          </main>
+          <NotificationsProvider>
+            <Navbar />
+            <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
+              <ProfileSidebar />
+              <div className="min-w-0 flex-1">{routes}</div>
+            </main>
+          </NotificationsProvider>
         </ProfileProvider>
       </ViewedProfileProvider>
     </div>

@@ -8,7 +8,6 @@ import { useFriendStatus } from '../hooks/useFriendStatus.js';
 import { getResumeSignedUrl, uploadResume } from '../utils/resume.js';
 import ChallengeWidget from './ChallengeWidget.jsx';
 import DefaultAvatar from './DefaultAvatar.jsx';
-import FollowersModal from './FollowersModal.jsx';
 import IconUserPlus from './IconUserPlus.jsx';
 
 // Icon-only "add friend" button - just the person-with-a-plus glyph, no
@@ -29,26 +28,22 @@ function AddFriendButton({ status, busy, onClick }) {
   );
 }
 
-// Small shared row: "123 followers" / "456 following" as two buttons that
-// open the followers/following modal scoped to whichever profile this
-// sidebar is showing - used by both the own-profile and viewed-profile cards
-// so the same Instagram-style browsing works either way.
-function FollowCounts({ userId, followers, following }) {
-  const [modal, setModal] = useState(null); // 'followers' | 'following' | null
+// "123 followers" / "456 following" as two links into the Friends page
+// (your own, or theirs) with ?tab= so it opens straight to the right list -
+// followers/following browsing itself now lives there as an inline panel,
+// not a popup over this card. See FollowListPanel.
+function FollowCounts({ friendsHref, followers, following }) {
   return (
-    <>
-      <div className="mt-3 flex justify-center gap-4 border-y border-grid py-2.5 text-sm">
-        <button onClick={() => setModal('followers')} className="hover:underline">
-          <span className="font-semibold text-paper">{followers}</span>{' '}
-          <span className="text-ink2">follower{followers === 1 ? '' : 's'}</span>
-        </button>
-        <button onClick={() => setModal('following')} className="hover:underline">
-          <span className="font-semibold text-paper">{following}</span>{' '}
-          <span className="text-ink2">following</span>
-        </button>
-      </div>
-      {modal && <FollowersModal userId={userId} initialTab={modal} onClose={() => setModal(null)} />}
-    </>
+    <div className="mt-3 flex justify-center gap-4 border-y border-grid py-2.5 text-sm">
+      <Link to={`${friendsHref}?tab=followers`} className="hover:underline">
+        <span className="font-semibold text-paper">{followers}</span>{' '}
+        <span className="text-ink2">follower{followers === 1 ? '' : 's'}</span>
+      </Link>
+      <Link to={`${friendsHref}?tab=following`} className="hover:underline">
+        <span className="font-semibold text-paper">{following}</span>{' '}
+        <span className="text-ink2">following</span>
+      </Link>
+    </div>
   );
 }
 
@@ -58,10 +53,10 @@ const ASIDE_CLASS = 'hidden w-96 flex-shrink-0 lg:block';
 // living inside any one page, so it's present - and keeps its own state -
 // across every screen instead of re-fetching each time you navigate.
 //
-// Normally shows YOUR OWN profile. But while a friend's profile page is
+// Normally shows YOUR OWN profile. But while someone else's profile is
 // open, ViewedProfileContext is set to their data, and this renders a
-// read-only card for THEM instead - so the card on the left always matches
-// whoever's page you're actually looking at.
+// read-only card for THEM instead - so the card always matches whoever's
+// page you're actually looking at.
 export default function ProfileSidebar() {
   const { viewed } = useViewedProfile();
   if (viewed) return <ViewedProfileCard viewed={viewed} />;
@@ -116,7 +111,7 @@ function ViewedProfileCard({ viewed }) {
           <p className="text-sm text-ink2">@{profile.username}</p>
           {profile.school && <p className="mt-1 text-xs text-ink2">{profile.school}</p>}
 
-          <FollowCounts userId={profile.id} followers={followers} following={following} />
+          <FollowCounts friendsHref={`/friends/${profile.id}/friends`} followers={followers} following={following} />
 
           {!isSelf && (
             <div className="mt-3 space-y-2">
@@ -279,7 +274,7 @@ function OwnProfileCard() {
           <p className="text-sm text-ink2">@{profile.username}</p>
           {profile.school && <p className="mt-1 text-xs text-ink2">{profile.school}</p>}
 
-          <FollowCounts userId={user.id} followers={followers} following={following} />
+          <FollowCounts friendsHref="/friends" followers={followers} following={following} />
 
           {(profile.linkedin_url || profile.github_url) && (
             <div className="mt-3 flex justify-center gap-3 text-xs">
