@@ -32,7 +32,7 @@ function describe(n) {
       };
     case 'friend_application':
       return {
-        text: `${name} applied to ${n.data.company} — ${n.data.role}.`,
+        text: `${name} applied to ${n.data.company} · ${n.data.role}.`,
         to: `/friends/${n.actor_id}/board`
       };
     default:
@@ -73,7 +73,7 @@ export default function Notifications() {
       {loading ? (
         <p className="text-sm text-ink2">Loading…</p>
       ) : notifications.length === 0 ? (
-        <p className="text-sm text-ink2">Nothing yet — this is where friend requests, duel updates, and friend activity will show up.</p>
+        <p className="text-sm text-ink2">Nothing yet - this is where friend requests, duel updates, and friend activity will show up.</p>
       ) : (
         <ul className="space-y-2">
           {notifications.map((n) => {

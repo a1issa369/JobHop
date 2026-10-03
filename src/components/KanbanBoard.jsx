@@ -164,7 +164,7 @@ export default function KanbanBoard({ applications, onCardClick, onStageChange }
               className="h-2 w-2 rounded-full"
               style={{ backgroundColor: STAGE_MAP[activeDragApp.stage]?.color }}
             />
-            {activeDragApp.company} — {activeDragApp.role}
+            {activeDragApp.company} · {activeDragApp.role}
           </div>
         )}
       </DragOverlay>

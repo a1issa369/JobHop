@@ -96,7 +96,7 @@ export default function CalendarHeatmap({ applicationsByDate }) {
   return (
     <div className="card-surface p-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-sm font-semibold">Activity — {year}</h3>
+        <h3 className="font-display text-sm font-semibold">Activity - {year}</h3>
         <div className="flex items-center gap-1 text-[10px] text-ink2">
           <span>Less</span>
           {LEVEL_COLORS.map((c, i) => (

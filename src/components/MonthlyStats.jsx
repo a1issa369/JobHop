@@ -48,7 +48,7 @@ export default function MonthlyStats({ applications, own = false }) {
   return (
     <div className="card-surface p-4">
       <h3 className="font-display text-sm font-semibold">
-        This month — {now.toLocaleString('default', { month: 'long' })}
+        This month - {now.toLocaleString('default', { month: 'long' })}
       </h3>
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
         {stats.map((s) => (

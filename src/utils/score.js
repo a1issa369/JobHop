@@ -8,7 +8,7 @@ import { FUNNEL_ORDER } from './stageConfig';
  *
  * Both components are 0-50, summed to a 0-100 score.
  * This mirrors the same formula the DB view `monthly_scores` computes server-side
- * (see supabase/schema.sql) — kept here too for any client-side preview/estimate.
+ * (see supabase/schema.sql) - kept here too for any client-side preview/estimate.
  */
 export function computeMonthlyScore(applicationsThisMonth) {
   const total = applicationsThisMonth.length;

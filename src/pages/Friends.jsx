@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSocialGraph } from '../context/SocialGraphContext.jsx';
 import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
 import Avatar from '../components/Avatar.jsx';
 import FollowListPanel from '../components/FollowListPanel.jsx';
@@ -10,6 +11,7 @@ import IconUserPlus from '../components/IconUserPlus.jsx';
 export default function Friends() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { version, bump } = useSocialGraph();
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -43,10 +45,13 @@ export default function Friends() {
     setPending(incoming);
   }
 
+  // Also re-fetches on every social graph `version` bump, so accepting or
+  // declining a request from the viewed-profile sidebar (not just from this
+  // page) updates the Pending requests / Your friends lists here too.
   useEffect(() => {
     loadFriends();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [version]);
 
   // Closes the dropdown on an outside click, same as any typeahead.
   useEffect(() => {
@@ -94,6 +99,7 @@ export default function Friends() {
       );
       if (reqErr) throw reqErr;
       setResults((r) => r.filter((p) => p.id !== addresseeId));
+      bump();
     } catch (err) {
       setError(err instanceof RateLimitError ? err.message : err.message);
     }
@@ -102,6 +108,7 @@ export default function Friends() {
   async function respond(friendshipId, status) {
     await supabase.from('friendships').update({ status }).eq('id', friendshipId);
     loadFriends();
+    bump();
   }
 
   return (
@@ -196,7 +203,7 @@ export default function Friends() {
       <section>
         <h2 className="mb-2 text-sm font-semibold text-ink2">Your friends</h2>
         {friends.length === 0 ? (
-          <p className="text-sm text-ink2">No friends yet — search above to add some.</p>
+          <p className="text-sm text-ink2">No friends yet - search above to add some.</p>
         ) : (
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {friends.map((f) => (

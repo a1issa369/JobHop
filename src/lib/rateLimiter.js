@@ -1,6 +1,6 @@
 // Client-side throttle: gives instant feedback and stops accidental
 // double-submits / loops from ever reaching the network.
-// This is a UX convenience only — it can be bypassed by anyone calling
+// This is a UX convenience only - it can be bypassed by anyone calling
 // the API directly, so the real limit is enforced server-side by the
 // check_rate_limit() Postgres function (see supabase/schema.sql) which
 // every write-heavy RPC calls before doing its work.

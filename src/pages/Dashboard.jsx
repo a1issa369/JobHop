@@ -53,7 +53,7 @@ export default function Dashboard() {
     if (updateErr) {
       // ...and rolled back if the server rejects it (RLS, network, etc.)
       setApplications(previous);
-      setError('Could not move that card — it snapped back. ' + updateErr.message);
+      setError('Could not move that card - it snapped back. ' + updateErr.message);
       return;
     }
 

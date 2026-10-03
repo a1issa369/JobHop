@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSocialGraph } from '../context/SocialGraphContext.jsx';
 import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
 
 // Friendship state between the signed-in user and one other user - 'none',
@@ -8,8 +9,14 @@ import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
 // or 'accepted'. friendships_select_participant already lets either party
 // read a row they're in regardless of its status, so this works for a
 // total stranger too, not just existing friends.
+//
+// Re-fetches on every SocialGraphContext `version` bump, so accepting or
+// declining a request from the Friends page immediately clears the
+// Accept/Decline block shown on this person's profile card too, without
+// needing a page refresh.
 export function useFriendStatus(targetId) {
   const { user } = useAuth();
+  const { version, bump } = useSocialGraph();
   const [status, setStatus] = useState('none');
   const [friendshipId, setFriendshipId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +55,7 @@ export function useFriendStatus(targetId) {
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+  }, [refresh, version]);
 
   async function sendRequest() {
     setBusy(true);
@@ -61,6 +68,7 @@ export function useFriendStatus(targetId) {
       );
       if (reqErr) throw reqErr;
       await refresh();
+      bump();
     } catch (err) {
       setError(err instanceof RateLimitError ? err.message : err.message);
     }
@@ -75,6 +83,7 @@ export function useFriendStatus(targetId) {
       .update({ status: accept ? 'accepted' : 'blocked' })
       .eq('id', friendshipId);
     await refresh();
+    bump();
     setBusy(false);
   }
 

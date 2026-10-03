@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useSocialGraph } from '../context/SocialGraphContext.jsx';
 import FollowListPanel from '../components/FollowListPanel.jsx';
 import Avatar from '../components/Avatar.jsx';
 
@@ -11,6 +12,7 @@ import Avatar from '../components/Avatar.jsx';
 export default function ViewedFriendsList() {
   const { profile } = useOutletContext();
   const [searchParams] = useSearchParams();
+  const { version } = useSocialGraph();
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +36,7 @@ export default function ViewedFriendsList() {
     return () => {
       cancelled = true;
     };
-  }, [profile.id]);
+  }, [profile.id, version]);
 
   return (
     <div className="space-y-6">

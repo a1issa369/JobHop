@@ -319,7 +319,7 @@ create policy "applications_all_own"
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
--- but friends ARE allowed to select created_at/stage for the heatmap —
+-- but friends ARE allowed to select created_at/stage for the heatmap -
 -- narrow policy limited to accepted friends, no notes/recruiter fields exposed
 -- via this policy since Postgres RLS is row-level; the app only selects
 -- (id, created_at, stage) columns from the client for friend views.

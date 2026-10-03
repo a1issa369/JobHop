@@ -139,17 +139,18 @@ export default function ChallengeWidget({ targetId, targetName, targetAvatar }) 
 
         {!withOpponent && (
           <div className="space-y-2">
-            <p className="text-xs text-ink2">Pick a duel length - most applications submitted wins.</p>
+            <p className="text-xs text-ink2">Pick a duel length in days - most applications submitted wins.</p>
             <div className="flex gap-1">
               {DURATIONS.map((d) => (
                 <button
                   key={d}
                   onClick={() => setDuration(d)}
+                  title={`${d} day${d === 1 ? '' : 's'}`}
                   className={`h-7 w-7 flex-1 rounded-full text-xs font-semibold transition-colors ${
                     duration === d ? 'bg-signal text-ink' : 'bg-grid/50 text-ink2 hover:bg-grid'
                   }`}
                 >
-                  {d}
+                  {d}d
                 </button>
               ))}
             </div>

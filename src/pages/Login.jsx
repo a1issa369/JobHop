@@ -27,7 +27,7 @@ export default function Login() {
 
     setBusy(true);
     try {
-      // Max 5 login attempts per minute per browser session — slows down
+      // Max 5 login attempts per minute per browser session - slows down
       // credential-stuffing loops without punishing a normal typo-and-retry.
       const { error: authError } = await withRateLimit(
         'login',

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSocialGraph } from '../context/SocialGraphContext.jsx';
 import DefaultAvatar from './DefaultAvatar.jsx';
 
 // Same followers/following browsing as before, just inline on the page
@@ -11,9 +12,15 @@ import DefaultAvatar from './DefaultAvatar.jsx';
 // not the profile owner's. Clicking a row navigates to that person's page.
 // `initialTab` is read once (e.g. from a ?tab= link) and can be changed
 // freely afterwards by clicking either tab.
+//
+// Re-fetches whenever the shared social graph `version` changes, and bumps
+// it after its own follow/unfollow - so the two tab counts here, this
+// user's card in the sidebar, and any other follow list on screen all stay
+// in sync with each other without a page refresh.
 export default function FollowListPanel({ userId, initialTab = 'followers' }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { version, bump } = useSocialGraph();
   const [tab, setTab] = useState(initialTab);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
@@ -57,7 +64,7 @@ export default function FollowListPanel({ userId, initialTab = 'followers' }) {
     return () => {
       cancelled = true;
     };
-  }, [userId, user]);
+  }, [userId, user, version]);
 
   const list = tab === 'followers' ? followers : following;
   const filtered = useMemo(() => {
@@ -87,6 +94,7 @@ export default function FollowListPanel({ userId, initialTab = 'followers' }) {
           next.delete(personId);
           return next;
         });
+        bump();
       }
     } else {
       const { error: insErr } = await supabase
@@ -94,6 +102,7 @@ export default function FollowListPanel({ userId, initialTab = 'followers' }) {
         .insert({ follower_id: user.id, followee_id: personId });
       if (!insErr) {
         setMyFollowing((prev) => new Set(prev).add(personId));
+        bump();
       }
     }
     setBusyId(null);

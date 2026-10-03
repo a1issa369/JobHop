@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext.jsx';
 import { ProfileProvider } from './context/ProfileContext.jsx';
 import { ViewedProfileProvider } from './context/ViewedProfileContext.jsx';
 import { NotificationsProvider } from './context/NotificationsContext.jsx';
+import { SocialGraphProvider } from './context/SocialGraphContext.jsx';
 import Navbar from './components/Navbar.jsx';
 import ProfileSidebar from './components/ProfileSidebar.jsx';
 import Login from './pages/Login.jsx';
@@ -134,17 +135,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <ViewedProfileProvider>
-        <ProfileProvider userId={user.id}>
-          <NotificationsProvider>
-            <Navbar />
-            <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
-              <ProfileSidebar />
-              <div className="min-w-0 flex-1">{routes}</div>
-            </main>
-          </NotificationsProvider>
-        </ProfileProvider>
-      </ViewedProfileProvider>
+      <SocialGraphProvider>
+        <ViewedProfileProvider>
+          <ProfileProvider userId={user.id}>
+            <NotificationsProvider>
+              <Navbar />
+              <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
+                <ProfileSidebar />
+                <div className="min-w-0 flex-1">{routes}</div>
+              </main>
+            </NotificationsProvider>
+          </ProfileProvider>
+        </ViewedProfileProvider>
+      </SocialGraphProvider>
     </div>
   );
 }

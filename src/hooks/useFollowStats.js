@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSocialGraph } from '../context/SocialGraphContext.jsx';
 
 // Follow stats for an arbitrary PROFILE BEING VIEWED (a friend's/other
 // user's page) - how many followers/following they have, and whether the
 // currently signed-in viewer follows them. Separate from useOwnProfile,
 // which only ever describes the logged-in user's own counts.
+//
+// Also re-fetches whenever `version` changes (see SocialGraphContext) - so
+// following this person from somewhere ELSE on the page (the followers
+// list, say) updates this card too, and this card's own follow/unfollow
+// bumps the counter so everyone else re-syncs in turn.
 export function useFollowStats(targetUserId) {
   const { user } = useAuth();
+  const { version, bump } = useSocialGraph();
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [amFollowing, setAmFollowing] = useState(false);
@@ -44,7 +51,7 @@ export function useFollowStats(targetUserId) {
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+  }, [refresh, version]);
 
   async function follow() {
     if (!user || !targetUserId || user.id === targetUserId) return;
@@ -56,6 +63,7 @@ export function useFollowStats(targetUserId) {
     if (!error) {
       setAmFollowing(true);
       setFollowers((f) => f + 1);
+      bump();
     }
     return { error };
   }
@@ -72,6 +80,7 @@ export function useFollowStats(targetUserId) {
     if (!error) {
       setAmFollowing(false);
       setFollowers((f) => Math.max(0, f - 1));
+      bump();
     }
     return { error };
   }

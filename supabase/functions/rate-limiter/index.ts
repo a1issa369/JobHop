@@ -3,7 +3,7 @@
 //
 // It just calls the prune_rate_limit_log() Postgres function so the
 // rate_limit_log table doesn't grow unbounded. Real-time limit checks
-// happen inline in Postgres (see check_rate_limit() in supabase/schema.sql) —
+// happen inline in Postgres (see check_rate_limit() in supabase/schema.sql) -
 // this function is only for periodic cleanup, not per-request enforcement.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
