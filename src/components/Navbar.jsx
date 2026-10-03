@@ -47,10 +47,11 @@ function ViewedNavLinks({ friendId }) {
   );
 }
 
-// The avatar on your own pages opens a small dropdown (your profile,
-// notifications with an unread badge, settings, sign out) rather than
-// navigating straight to one destination - there's no single obvious place
-// for it to go now that Settings isn't its own nav link anymore.
+// The avatar ALWAYS opens a dropdown first, whether you're on your own
+// pages or looking at someone else's - clicking it never jumps straight to
+// a destination. "Your profile" is what doubles as the way back out of a
+// viewed profile (navigating there unmounts the ViewedProfileLayout, which
+// is what hands the sidebar/nav back to showing you).
 function AvatarMenu() {
   const { profile } = useProfileContext();
   const { unreadCount } = useNotificationsContext();
@@ -128,27 +129,6 @@ function AvatarMenu() {
   );
 }
 
-// While viewing someone else, there's nothing to open a menu for - the
-// avatar is just "take me back to my own profile", shown as your OWN
-// picture (not theirs) so it reads as a way out, not a way further in.
-function BackToOwnProfile() {
-  const { profile } = useProfileContext();
-  const navigate = useNavigate();
-  return (
-    <button
-      onClick={() => navigate('/profile')}
-      title="Back to your profile"
-      className="ml-2 flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel ring-2 ring-transparent transition-all duration-150 hover:scale-110 hover:ring-route"
-    >
-      {profile?.avatar_url ? (
-        <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <DefaultAvatar className="h-7 w-7" />
-      )}
-    </button>
-  );
-}
-
 export default function Navbar() {
   const { user } = useAuth();
   const { viewed } = useViewedProfile();
@@ -187,7 +167,7 @@ export default function Navbar() {
           ) : (
             <OwnNavLinks />
           )}
-          {user && (viewingSomeoneElse ? <BackToOwnProfile /> : <AvatarMenu />)}
+          {user && <AvatarMenu />}
         </nav>
       </div>
     </header>
