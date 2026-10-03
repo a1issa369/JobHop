@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { eachDayOfInterval, endOfYear, format, getDay, startOfYear } from 'date-fns';
+import { differenceInCalendarDays, eachDayOfInterval, endOfYear, format, getDay, startOfYear } from 'date-fns';
 
 function levelFor(count, max) {
   if (count === 0) return 0;
@@ -24,11 +24,10 @@ const LEVEL_COLORS = [
 // a month label over the column where that month starts. Back to this
 // layout (rather than a 12-block month grid) since it's the one that
 // actually fit cleanly in the page.
-function buildWeeks(year, applicationsByDate) {
+function buildWeeks(year, leadingBlanks, applicationsByDate) {
   const start = startOfYear(new Date(year, 0, 1));
   const end = endOfYear(start);
   const days = eachDayOfInterval({ start, end });
-  const leadingBlanks = getDay(start); // pad so the first column still starts on Sunday
 
   const cells = [
     ...Array(leadingBlanks).fill(null),
@@ -43,21 +42,21 @@ function buildWeeks(year, applicationsByDate) {
   return weeks;
 }
 
-// Picks the first week column that contains the 1st of a new month, so
-// each month name appears exactly once, roughly above where it begins.
-function monthLabels(weeks) {
-  const labels = [];
-  let lastMonth = null;
-  weeks.forEach((week, i) => {
-    const firstRealDay = week.find((c) => c);
-    if (!firstRealDay) return;
-    const month = firstRealDay.date.getMonth();
-    if (month !== lastMonth) {
-      labels.push({ weekIndex: i, label: format(firstRealDay.date, 'MMM') });
-      lastMonth = month;
-    }
+// Places each month's label directly over the column that contains that
+// month's 1st, found by date arithmetic rather than by scanning each
+// week's first cell. Scanning the first cell got this wrong whenever a
+// month started mid-week: the label only advanced once a column's TOP
+// (Sunday) row crossed into the new month, so e.g. December's label
+// showed up a column later than December 1st actually sat, out of step
+// with the cells underneath it.
+function monthLabels(year, leadingBlanks) {
+  const jan1 = startOfYear(new Date(year, 0, 1));
+  return Array.from({ length: 12 }, (_, m) => {
+    const firstOfMonth = new Date(year, m, 1);
+    const dayIndex = differenceInCalendarDays(firstOfMonth, jan1);
+    const weekIndex = Math.floor((dayIndex + leadingBlanks) / 7);
+    return { weekIndex, label: format(firstOfMonth, 'MMM') };
   });
-  return labels;
 }
 
 export default function CalendarHeatmap({ applicationsByDate }) {
@@ -65,8 +64,12 @@ export default function CalendarHeatmap({ applicationsByDate }) {
   const year = new Date().getFullYear();
   const max = Math.max(1, ...Object.values(applicationsByDate));
 
-  const weeks = useMemo(() => buildWeeks(year, applicationsByDate), [year, applicationsByDate]);
-  const labels = useMemo(() => monthLabels(weeks), [weeks]);
+  const leadingBlanks = getDay(startOfYear(new Date(year, 0, 1))); // pad so the first column starts on Sunday
+  const weeks = useMemo(
+    () => buildWeeks(year, leadingBlanks, applicationsByDate),
+    [year, leadingBlanks, applicationsByDate]
+  );
+  const labels = useMemo(() => monthLabels(year, leadingBlanks), [year, leadingBlanks]);
 
   return (
     <div className="card-surface p-4">

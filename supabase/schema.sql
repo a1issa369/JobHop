@@ -665,3 +665,25 @@ grant execute on function cancel_challenge(uuid) to authenticated;
 grant execute on function resolve_challenge(uuid) to authenticated;
 grant execute on function challenge_progress(uuid) to authenticated;
 grant execute on function head_to_head(uuid) to authenticated;
+
+-- ============================================================
+-- Username search (bypasses the friend/follow-only profile RLS on
+-- purpose, for a narrow public directory lookup - see migration 009)
+-- ============================================================
+create function search_profiles(p_query text)
+returns table(id uuid, username text, full_name text, avatar_url text) as $$
+begin
+  if coalesce(trim(p_query), '') = '' then
+    return;
+  end if;
+  return query
+    select p.id, p.username, p.full_name, p.avatar_url
+    from profiles p
+    where p.username ilike '%' || trim(p_query) || '%'
+      and p.id <> auth.uid()
+    order by p.username
+    limit 10;
+end;
+$$ language plpgsql security definer stable;
+
+grant execute on function search_profiles(text) to authenticated;

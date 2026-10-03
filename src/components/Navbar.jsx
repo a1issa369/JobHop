@@ -60,7 +60,7 @@ export default function Navbar() {
             Friends
           </NavLink>
           <NavLink to="/challenges" className={linkClass}>
-            Challenges
+            Duels
           </NavLink>
           <NavLink to="/settings" className={linkClass}>
             Settings

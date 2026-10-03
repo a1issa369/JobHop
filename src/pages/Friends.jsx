@@ -3,17 +3,19 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
 import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
+import Avatar from '../components/Avatar.jsx';
 
 export default function Friends() {
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
-  const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [open, setOpen] = useState(false);
   const [friends, setFriends] = useState([]);
   const [pending, setPending] = useState([]);
   const [error, setError] = useState('');
   const debounceRef = useRef(null);
+  const boxRef = useRef(null);
 
   async function loadFriends() {
     const { data } = await supabase
@@ -42,40 +44,39 @@ export default function Friends() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function runSearch(term) {
-    if (!term.trim()) {
+  // Closes the dropdown on an outside click, same as any typeahead.
+  useEffect(() => {
+    function onClick(e) {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  // Live search as you type, debounced so each keystroke doesn't fire its
+  // own query. Goes through the search_profiles RPC rather than a direct
+  // `.from('profiles')` select - profile rows are RLS-gated to people
+  // you're already friends with or following, so a plain select would
+  // silently return nothing for anyone you haven't met yet. The RPC is a
+  // deliberate, narrow exception: username/name/avatar only, for exactly
+  // this directory-style search.
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    if (!query.trim()) {
       setResults([]);
-      setSearched(false);
+      setOpen(false);
       return;
     }
     setSearching(true);
-    const { data, error: searchErr } = await supabase
-      .from('profiles')
-      .select('id, username, avatar_url')
-      .ilike('username', `%${term.trim()}%`)
-      .neq('id', user.id)
-      .limit(10);
-    if (searchErr) setError(searchErr.message);
-    setResults(data ?? []);
-    setSearched(true);
-    setSearching(false);
-  }
-
-  // Live search as you type, debounced so each keystroke doesn't fire its
-  // own query - the Search button still works too, for anyone who'd rather
-  // hit enter/click than wait the debounce out.
-  useEffect(() => {
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(query), 300);
+    debounceRef.current = setTimeout(async () => {
+      const { data, error: searchErr } = await supabase.rpc('search_profiles', { p_query: query });
+      if (searchErr) setError(searchErr.message);
+      setResults(data ?? []);
+      setSearching(false);
+      setOpen(true);
+    }, 250);
     return () => clearTimeout(debounceRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
-
-  function handleSearch(e) {
-    e.preventDefault();
-    clearTimeout(debounceRef.current);
-    runSearch(query);
-  }
 
   async function sendRequest(addresseeId) {
     try {
@@ -108,39 +109,46 @@ export default function Friends() {
         <p className="text-sm text-ink2">Find people and follow their progress.</p>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-2">
+      <div ref={boxRef} className="relative max-w-xs">
         <input
-          className="input max-w-xs"
+          className="input w-full"
           placeholder="Search by username"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => query.trim() && setOpen(true)}
+          autoComplete="off"
         />
-        <button className="btn-secondary">Search</button>
-      </form>
+
+        {open && (
+          <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-grid bg-panel shadow-lg">
+            {searching ? (
+              <p className="p-3 text-sm text-ink2">Searching…</p>
+            ) : results.length > 0 ? (
+              <ul className="max-h-72 overflow-y-auto">
+                {results.map((p) => (
+                  <li key={p.id} className="flex items-center gap-2 px-3 py-2 hover:bg-grid/40">
+                    <Avatar url={p.avatar_url} size={28} />
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {p.full_name || p.username}
+                      <span className="ml-1 text-ink2">@{p.username}</span>
+                    </span>
+                    <button
+                      onClick={() => sendRequest(p.id)}
+                      className="btn-secondary flex-shrink-0 text-xs"
+                    >
+                      Add
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="p-3 text-sm text-ink2">No users found matching "{query.trim()}".</p>
+            )}
+          </div>
+        )}
+      </div>
 
       {error && <p className="text-sm text-bad">{error}</p>}
-
-      {query.trim() && (
-        <section>
-          <h2 className="mb-2 text-sm font-semibold text-ink2">Results</h2>
-          {searching ? (
-            <p className="text-sm text-ink2">Searching…</p>
-          ) : results.length > 0 ? (
-            <ul className="space-y-2">
-              {results.map((p) => (
-                <li key={p.id} className="card-surface flex items-center justify-between p-3">
-                  <span>{p.username}</span>
-                  <button onClick={() => sendRequest(p.id)} className="btn-secondary text-xs">
-                    Add friend
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            searched && <p className="text-sm text-ink2">No users found matching "{query.trim()}".</p>
-          )}
-        </section>
-      )}
 
       {pending.length > 0 && (
         <section>
