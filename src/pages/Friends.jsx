@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -8,9 +8,12 @@ export default function Friends() {
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [searched, setSearched] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [friends, setFriends] = useState([]);
   const [pending, setPending] = useState([]);
   const [error, setError] = useState('');
+  const debounceRef = useRef(null);
 
   async function loadFriends() {
     const { data } = await supabase
@@ -39,17 +42,39 @@ export default function Friends() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleSearch(e) {
-    e.preventDefault();
-    if (!query.trim()) return;
+  async function runSearch(term) {
+    if (!term.trim()) {
+      setResults([]);
+      setSearched(false);
+      return;
+    }
+    setSearching(true);
     const { data, error: searchErr } = await supabase
       .from('profiles')
       .select('id, username, avatar_url')
-      .ilike('username', `%${query.trim()}%`)
+      .ilike('username', `%${term.trim()}%`)
       .neq('id', user.id)
       .limit(10);
     if (searchErr) setError(searchErr.message);
     setResults(data ?? []);
+    setSearched(true);
+    setSearching(false);
+  }
+
+  // Live search as you type, debounced so each keystroke doesn't fire its
+  // own query - the Search button still works too, for anyone who'd rather
+  // hit enter/click than wait the debounce out.
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => runSearch(query), 300);
+    return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  function handleSearch(e) {
+    e.preventDefault();
+    clearTimeout(debounceRef.current);
+    runSearch(query);
   }
 
   async function sendRequest(addresseeId) {
@@ -95,19 +120,25 @@ export default function Friends() {
 
       {error && <p className="text-sm text-bad">{error}</p>}
 
-      {results.length > 0 && (
+      {query.trim() && (
         <section>
           <h2 className="mb-2 text-sm font-semibold text-ink2">Results</h2>
-          <ul className="space-y-2">
-            {results.map((p) => (
-              <li key={p.id} className="card-surface flex items-center justify-between p-3">
-                <span>{p.username}</span>
-                <button onClick={() => sendRequest(p.id)} className="btn-secondary text-xs">
-                  Add friend
-                </button>
-              </li>
-            ))}
-          </ul>
+          {searching ? (
+            <p className="text-sm text-ink2">Searching…</p>
+          ) : results.length > 0 ? (
+            <ul className="space-y-2">
+              {results.map((p) => (
+                <li key={p.id} className="card-surface flex items-center justify-between p-3">
+                  <span>{p.username}</span>
+                  <button onClick={() => sendRequest(p.id)} className="btn-secondary text-xs">
+                    Add friend
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            searched && <p className="text-sm text-ink2">No users found matching "{query.trim()}".</p>
+          )}
         </section>
       )}
 
