@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useSocialGraph } from '../context/SocialGraphContext.jsx';
 import DuelVersus from '../components/DuelVersus.jsx';
 
 const PARTICIPANT_FIELDS = 'id, username, full_name, avatar_url';
@@ -38,9 +39,14 @@ function OutcomeBadge({ outcome }) {
 // involved, same as a friend request would.
 export default function ViewedDuels() {
   const { profile } = useOutletContext();
+  const { version } = useSocialGraph();
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Also re-fetches on every social graph `version` bump - unfollowing
+  // someone mid-duel now auto-completes that duel as a loss for whoever
+  // unfollowed (see migration 012), so this needs to reflect that right
+  // away rather than only after a page refresh.
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -64,7 +70,7 @@ export default function ViewedDuels() {
     return () => {
       cancelled = true;
     };
-  }, [profile.id]);
+  }, [profile.id, version]);
 
   if (loading) {
     return (

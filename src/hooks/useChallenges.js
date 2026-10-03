@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSocialGraph } from '../context/SocialGraphContext.jsx';
 
 const PARTICIPANT_FIELDS =
   'id, username, full_name, avatar_url';
@@ -13,6 +14,7 @@ const PARTICIPANT_FIELDS =
 // participant's client notices first settles it for both.
 export function useChallenges() {
   const { user } = useAuth();
+  const { version } = useSocialGraph();
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -59,9 +61,14 @@ export function useChallenges() {
     setLoading(false);
   }, [user]);
 
+  // Also re-fetches on every social graph `version` bump - unfollowing
+  // someone mid-duel now auto-completes that duel as a loss for whoever
+  // unfollowed (see migration 012), so this list reflects that right away
+  // instead of only after a page refresh.
   useEffect(() => {
     refresh();
-  }, [refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh, version]);
 
   async function sendChallenge(opponentId, durationDays) {
     const { data, error: err } = await supabase.rpc('create_challenge', {
