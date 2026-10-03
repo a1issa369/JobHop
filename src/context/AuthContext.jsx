@@ -136,6 +136,20 @@ export function AuthProvider({ children }) {
       if (reauth.error) return { error: { message: 'Current password is incorrect.' } };
 
       return callAuth(() => supabase.auth.updateUser({ password: newPassword }));
+    },
+
+    // Same re-authentication pattern as changePassword, pulled out standalone
+    // for any other destructive action that should require re-proving the
+    // account password first (e.g. bulk-deleting every card) without also
+    // changing it.
+    verifyPassword: async (password) => {
+      const { data: userData } = await supabase.auth.getUser();
+      const email = userData?.user?.email;
+      if (!email) return { error: { message: 'No active session.' } };
+
+      const reauth = await callAuth(() => supabase.auth.signInWithPassword({ email, password }));
+      if (reauth.error) return { error: { message: 'Password is incorrect.' } };
+      return { error: null };
     }
   };
 

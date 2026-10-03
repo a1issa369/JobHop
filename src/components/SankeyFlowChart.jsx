@@ -27,8 +27,36 @@ const NODE_COLORS = {
   waiting_for_response: '#6B7684'
 };
 
+// chartjs-chart-sankey only exposes a `priority` for which COLUMN a node
+// lands in (left-to-right) - it has no setting for vertical order within a
+// column, and defaults to whatever order nodes are first encountered while
+// walking the edge list. Left alone, that meant Rejected could end up
+// above Offer, or any outcome could land in a different spot every reload,
+// purely based on insertion order. Sorting the edges into this fixed order
+// before handing them to the chart makes that encounter order consistent
+// and sensible every time: top-to-bottom, Applied's immediate next steps
+// first, then interviews, then outcomes (best to worst).
+const VERTICAL_ORDER = {
+  applied: 0,
+  waiting_for_response: 1,
+  assessment: 2,
+  phone_screen: 3,
+  onsite: 4,
+  offer: 5,
+  rejected: 6,
+  withdrawn: 7
+};
+
+function sortForStableLayout(flows) {
+  return [...flows].sort((a, b) => {
+    const fromDiff = (VERTICAL_ORDER[a.from] ?? 99) - (VERTICAL_ORDER[b.from] ?? 99);
+    if (fromDiff !== 0) return fromDiff;
+    return (VERTICAL_ORDER[a.to] ?? 99) - (VERTICAL_ORDER[b.to] ?? 99);
+  });
+}
+
 export default function SankeyFlowChart({ applications, stageHistory }) {
-  const flows = buildSankeyFlows(applications, stageHistory);
+  const flows = sortForStableLayout(buildSankeyFlows(applications, stageHistory));
 
   if (flows.length === 0) {
     return (

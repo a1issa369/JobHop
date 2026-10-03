@@ -325,6 +325,103 @@ function PasswordSection() {
 }
 
 function DangerSection() {
+  return (
+    <div className="space-y-6">
+      <DeleteAllCardsCard />
+      <DeleteAccountCard />
+    </div>
+  );
+}
+
+// Wipes every application (and, via the cascade on stage_history's foreign
+// key, every stage transition tied to them) without touching the account
+// itself - for starting the tracker over without re-signing-up. Requires
+// re-entering the account password first, the same re-authentication
+// pattern the "Change password" form uses, since this can't be undone.
+function DeleteAllCardsCard() {
+  const { user, verifyPassword } = useAuth();
+  const [confirmText, setConfirmText] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  const canDelete = confirmText.trim().toUpperCase() === 'DELETE ALL' && password.length > 0;
+
+  async function handleDelete() {
+    if (!canDelete) return;
+    setBusy(true);
+    setError('');
+    setDone(false);
+
+    const { error: pwErr } = await verifyPassword(password);
+    if (pwErr) {
+      setBusy(false);
+      setError(pwErr.message);
+      return;
+    }
+
+    const { error: delErr } = await supabase.from('applications').delete().eq('user_id', user.id);
+    setBusy(false);
+
+    if (delErr) {
+      setError(delErr.message);
+      return;
+    }
+    setConfirmText('');
+    setPassword('');
+    setDone(true);
+  }
+
+  return (
+    <div className="card-surface border-bad/40 p-5">
+      <h2 className="font-display text-sm font-semibold text-bad">Delete all cards</h2>
+      <p className="mt-2 text-sm text-ink2">
+        Permanently deletes every application card and its stage history. Your account, profile,
+        and friends stay intact. This cannot be undone.
+      </p>
+
+      <label className="mt-4 block text-xs text-ink2">
+        Type <span className="font-semibold text-paper">DELETE ALL</span> to confirm
+        <input
+          className="input mt-1"
+          value={confirmText}
+          onChange={(e) => {
+            setConfirmText(e.target.value);
+            setDone(false);
+          }}
+        />
+      </label>
+
+      <label className="mt-3 block text-xs text-ink2">
+        Your password
+        <input
+          type="password"
+          className="input mt-1"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setDone(false);
+          }}
+          autoComplete="current-password"
+        />
+      </label>
+
+      {error && <p className="mt-2 text-sm text-bad">{error}</p>}
+      {done && <p className="mt-2 text-sm text-good">All cards deleted.</p>}
+
+      <button
+        onClick={handleDelete}
+        disabled={!canDelete || busy}
+        className="mt-4 rounded bg-bad px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110 disabled:opacity-40"
+      >
+        {busy ? 'Deleting…' : 'Permanently delete all cards'}
+      </button>
+    </div>
+  );
+}
+
+function DeleteAccountCard() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState('');

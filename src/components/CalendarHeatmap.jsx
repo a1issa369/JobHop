@@ -38,11 +38,10 @@ const LEVEL_COLORS = [
   'bg-signal'
 ];
 
-// Mon/Wed/Fri only (GitHub's own convention) - labeling every row is just
-// clutter at this cell size.
-const WEEKDAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
-
 export default function CalendarHeatmap({ applicationsByDate }) {
+  // Recomputed on every render from `new Date()` inside buildYearGrid, so
+  // this always reflects whatever year it actually is - Jan 1 of the
+  // current year through Dec 31, never a fixed/hardcoded year.
   const { days, leadingBlanks, year } = useMemo(() => buildYearGrid(), []);
 
   const max = Math.max(1, ...Object.values(applicationsByDate));
@@ -93,21 +92,17 @@ export default function CalendarHeatmap({ applicationsByDate }) {
       </div>
 
       <div className="mt-4 overflow-x-auto pb-2">
-        <div className="flex gap-1 pl-7">
+        <div className="flex gap-1">
           {monthLabels.map((label, i) => (
-            <div key={i} className="w-3 flex-shrink-0 text-[10px] leading-3 text-ink2">
+            <div
+              key={i}
+              className="w-3 flex-shrink-0 overflow-visible whitespace-nowrap text-[10px] leading-3 text-ink2"
+            >
               {label}
             </div>
           ))}
         </div>
         <div className="mt-1 flex gap-1">
-          <div className="flex flex-shrink-0 flex-col gap-1 pr-1">
-            {WEEKDAY_LABELS.map((label, i) => (
-              <div key={i} className="h-3 w-6 text-right text-[10px] leading-3 text-ink2">
-                {label}
-              </div>
-            ))}
-          </div>
           {weeks.map((week, wi) => (
             <div key={wi} className="flex flex-col gap-1">
               {week.map((cell, di) =>
