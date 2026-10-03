@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useOwnProfile } from '../hooks/useOwnProfile.js';
 import { analyzePassword, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/password.js';
+import { uploadAvatar } from '../utils/avatar.js';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter.jsx';
+import DefaultAvatar from '../components/DefaultAvatar.jsx';
 
 const SECTIONS = [
   { key: 'profile', label: 'Profile' },
@@ -71,6 +73,9 @@ function ProfileSection() {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const avatarInputRef = useRef(null);
 
   // Seed the editable form once the profile has loaded, without
   // clobbering in-progress edits on a later re-fetch.
@@ -99,6 +104,21 @@ function ProfileSection() {
   }
 
   if (!form) return <p className="text-sm text-ink2">Loading…</p>;
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+    setAvatarBusy(true);
+    setAvatarError('');
+    const { error: uploadErr } = await uploadAvatar(user.id, file);
+    setAvatarBusy(false);
+    if (uploadErr) {
+      setAvatarError(uploadErr.message);
+      return;
+    }
+    refresh();
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -136,6 +156,40 @@ function ProfileSection() {
   return (
     <div className="card-surface p-5">
       <h2 className="font-display text-sm font-semibold">Edit profile</h2>
+
+      <div className="mt-4 flex items-center gap-4">
+        {profile.avatar_url ? (
+          <img
+            src={profile.avatar_url}
+            alt=""
+            className="h-16 w-16 flex-shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <span className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-panel">
+            <DefaultAvatar className="h-10 w-10" />
+          </span>
+        )}
+        <div>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={handleAvatarChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={avatarBusy}
+            className="btn-secondary text-xs"
+          >
+            {avatarBusy ? 'Uploading…' : profile.avatar_url ? 'Change photo' : 'Upload photo'}
+          </button>
+          <p className="mt-1 text-[11px] text-ink2">JPG, PNG, WEBP, or GIF, up to 5MB.</p>
+          {avatarError && <p className="mt-1 text-xs text-bad">{avatarError}</p>}
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="mt-4 space-y-3">
         <Field label="Username">
           <input

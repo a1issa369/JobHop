@@ -82,6 +82,8 @@ create table applications (
   role text not null check (char_length(role) between 1 and 100),
   stage text not null default 'wishlist'
     check (stage in ('wishlist','applied','assessment','phone_screen','onsite','offer','rejected','withdrawn')),
+  location text check (char_length(location) <= 100),
+  work_type text check (work_type in ('remote', 'hybrid', 'onsite')),
   deadline date,
   follow_up_date date,
   notes text check (char_length(notes) <= 2000),
@@ -379,3 +381,28 @@ create policy "resumes_owner_or_friend_read"
       )
     )
   );
+
+-- ============================================================
+-- Storage bucket for avatars (run once)
+-- ============================================================
+-- Public bucket: unlike resumes, avatar images aren't sensitive, so they're
+-- served straight from a public URL rather than needing a signed URL.
+insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true)
+  on conflict (id) do update set public = true;
+
+create policy "avatars_owner_write"
+  on storage.objects for insert
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "avatars_owner_update"
+  on storage.objects for update
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "avatars_owner_delete"
+  on storage.objects for delete
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "avatars_public_read"
+  on storage.objects for select
+  using (bucket_id = 'avatars');

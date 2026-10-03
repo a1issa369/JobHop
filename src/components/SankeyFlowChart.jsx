@@ -2,21 +2,30 @@ import { Chart as ChartJS } from 'chart.js';
 import { SankeyController, Flow } from 'chartjs-chart-sankey';
 import { Chart } from 'react-chartjs-2';
 import { STAGE_MAP } from '../utils/stageConfig';
-import { buildSankeyFlows } from '../utils/sankeyData';
+import { buildSankeyFlows, computeNodeTotals } from '../utils/sankeyData';
 
 ChartJS.register(SankeyController, Flow);
 
 // Wishlist is excluded - the flow only tracks real pipeline movement.
-const NODE_LABELS = Object.fromEntries(
-  Object.entries(STAGE_MAP)
-    .filter(([key]) => key !== 'wishlist')
-    .map(([key, s]) => [key, s.label])
-);
-const NODE_COLORS = Object.fromEntries(
-  Object.entries(STAGE_MAP)
-    .filter(([key]) => key !== 'wishlist')
-    .map(([key, s]) => [key, s.color])
-);
+// "waiting_for_response" is a synthetic node (not a real stage anyone can
+// drag a card into) representing applications still sitting at Applied
+// with no outcome yet - see buildSankeyFlows.
+const NODE_LABELS = {
+  ...Object.fromEntries(
+    Object.entries(STAGE_MAP)
+      .filter(([key]) => key !== 'wishlist')
+      .map(([key, s]) => [key, s.label])
+  ),
+  waiting_for_response: 'Waiting for response'
+};
+const NODE_COLORS = {
+  ...Object.fromEntries(
+    Object.entries(STAGE_MAP)
+      .filter(([key]) => key !== 'wishlist')
+      .map(([key, s]) => [key, s.color])
+  ),
+  waiting_for_response: '#6B7684'
+};
 
 export default function SankeyFlowChart({ applications, stageHistory }) {
   const flows = buildSankeyFlows(applications, stageHistory);
@@ -32,6 +41,16 @@ export default function SankeyFlowChart({ applications, stageHistory }) {
     );
   }
 
+  const nodeTotals = computeNodeTotals(flows);
+  // Each node's label gets its running total appended (e.g. "Applied 12"),
+  // matching how the reference design shows a count under every stage name.
+  const labelsWithCounts = Object.fromEntries(
+    Object.entries(NODE_LABELS).map(([key, label]) => [
+      key,
+      nodeTotals[key] ? `${label} (${nodeTotals[key]})` : label
+    ])
+  );
+
   const data = {
     datasets: [
       {
@@ -40,7 +59,7 @@ export default function SankeyFlowChart({ applications, stageHistory }) {
         colorFrom: (ctx) => NODE_COLORS[ctx.dataset.data[ctx.dataIndex]?.from] ?? '#9385D1',
         colorTo: (ctx) => NODE_COLORS[ctx.dataset.data[ctx.dataIndex]?.to] ?? '#9385D1',
         colorMode: 'gradient',
-        labels: NODE_LABELS,
+        labels: labelsWithCounts,
         color: '#F1ECFA',
         borderColor: '#3D2C55',
         font: { size: 11 },
@@ -48,9 +67,12 @@ export default function SankeyFlowChart({ applications, stageHistory }) {
         // branches out of, then keeps every later stage in pipeline order
         // reading left-to-right - the horizontal equivalent of "bulk at
         // the top, stages below it in order" (the library only lays
-        // sankeys out left-to-right, not top-to-bottom).
+        // sankeys out left-to-right, not top-to-bottom). The synthetic
+        // "waiting" bucket sits in the same column as Assessment, since
+        // it's just as much an immediate next-step from Applied.
         priority: {
           applied: 0,
+          waiting_for_response: 1,
           assessment: 1,
           phone_screen: 2,
           onsite: 3,
@@ -84,6 +106,7 @@ export default function SankeyFlowChart({ applications, stageHistory }) {
       <h3 className="font-display text-sm font-semibold">Application flow</h3>
       <p className="mt-1 text-xs text-ink2">
         Where applications go after Applied - assessments, interviews, offers, and rejections.
+        Moving a card backward (undoing a mis-drop) isn't counted as a real transition.
       </p>
       <div className="mt-3 h-72">
         <Chart type="sankey" data={data} options={options} />

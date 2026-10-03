@@ -15,3 +15,13 @@ export const STAGE_MAP = Object.fromEntries(STAGES.map((s) => [s.key, s]));
 
 // Stages counted as "still active" in the pipeline (used for funnel math).
 export const FUNNEL_ORDER = ['applied', 'assessment', 'phone_screen', 'onsite', 'offer'];
+
+// The only three allowed values for an application's work arrangement -
+// deliberately a closed dropdown, not free text, so cards stay consistent
+// and filterable instead of accumulating "Remote", "remote", "WFH", etc.
+export const WORK_TYPES = [
+  { key: 'remote', label: 'Remote' },
+  { key: 'hybrid', label: 'Hybrid' },
+  { key: 'onsite', label: 'Onsite' }
+];
+export const WORK_TYPE_MAP = Object.fromEntries(WORK_TYPES.map((w) => [w.key, w]));

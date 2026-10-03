@@ -20,7 +20,7 @@ export default function ProfileSidebar() {
   // forever when the query errored (e.g. a migration hadn't been run yet).
   if (loading) {
     return (
-      <aside className="hidden w-80 flex-shrink-0 lg:block">
+      <aside className="hidden w-96 flex-shrink-0 lg:block">
         <div className="sticky top-20 card-surface p-5 text-sm text-ink2">Loading profile…</div>
       </aside>
     );
@@ -28,7 +28,7 @@ export default function ProfileSidebar() {
 
   if (error || !profile) {
     return (
-      <aside className="hidden w-80 flex-shrink-0 lg:block">
+      <aside className="hidden w-96 flex-shrink-0 lg:block">
         <div className="sticky top-20 card-surface p-5 text-sm">
           <p className="text-bad">Couldn't load your profile.</p>
           <p className="mt-1 text-xs text-ink2">{error?.message ?? 'Unknown error.'}</p>
@@ -63,7 +63,7 @@ export default function ProfileSidebar() {
   }
 
   return (
-    <aside className="hidden w-80 flex-shrink-0 lg:block">
+    <aside className="hidden w-96 flex-shrink-0 lg:block">
       <div className="sticky top-20 space-y-4">
         <div className="card-surface p-5 text-center">
           {profile.avatar_url ? (

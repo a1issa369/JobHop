@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
 import { format, isPast, parseISO } from 'date-fns';
-import { STAGE_MAP } from '../utils/stageConfig';
+import { STAGE_MAP, WORK_TYPE_MAP } from '../utils/stageConfig';
 
 export default function ApplicationCard({ application, onClick }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -36,6 +36,13 @@ export default function ApplicationCard({ application, onClick }) {
             {application.company}
           </p>
           <p className="mt-0.5 text-xs text-ink2">{application.role}</p>
+          {(application.location || application.work_type) && (
+            <p className="mt-0.5 text-[11px] text-ink2/80">
+              {[application.location, WORK_TYPE_MAP[application.work_type]?.label]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          )}
         </div>
         <span
           className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium"

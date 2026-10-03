@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { z } from 'zod';
-import { STAGES } from '../utils/stageConfig';
+import { STAGES, WORK_TYPES } from '../utils/stageConfig';
 
 // Only company, role, and stage are required to create a card. Everything
-// else (deadline, follow-up, notes) is optional detail added later.
+// else (deadline, follow-up, notes, location, work type) is optional detail
+// added later.
 const schema = z.object({
   company: z.string().min(1, 'Company is required').max(100),
   role: z.string().min(1, 'Role is required').max(100),
   stage: z.string().min(1),
+  location: z.string().max(100).optional().or(z.literal('')),
+  work_type: z.enum(['remote', 'hybrid', 'onsite']).optional().or(z.literal('')),
   deadline: z.string().optional().or(z.literal('')),
   follow_up_date: z.string().optional().or(z.literal('')),
   notes: z.string().max(2000).optional().or(z.literal(''))
@@ -21,6 +24,8 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
       company: '',
       role: '',
       stage: 'wishlist',
+      location: '',
+      work_type: '',
       deadline: '',
       follow_up_date: '',
       notes: ''
@@ -56,7 +61,15 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
       return;
     }
     setError('');
-    onSave({ ...parsed.data, id: initial?.id });
+    onSave({
+      ...parsed.data,
+      // Empty string isn't a valid value for either column (the DB check
+      // constraint on work_type only allows null or one of the three
+      // options) - normalize "not filled in yet" to null for both.
+      location: parsed.data.location || null,
+      work_type: parsed.data.work_type || null,
+      id: initial?.id
+    });
   }
 
   return (
@@ -105,6 +118,31 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
               ))}
             </select>
           </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Location">
+              <input
+                className="input"
+                placeholder="San Diego, CA"
+                value={form.location ?? ''}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+              />
+            </Field>
+            <Field label="Work type">
+              <select
+                className="input"
+                value={form.work_type ?? ''}
+                onChange={(e) => setForm({ ...form, work_type: e.target.value })}
+              >
+                <option value="">Not specified</option>
+                {WORK_TYPES.map((w) => (
+                  <option key={w.key} value={w.key}>
+                    {w.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Deadline">

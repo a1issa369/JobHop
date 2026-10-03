@@ -38,7 +38,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       {showChrome && <Navbar />}
-      <main className="mx-auto flex max-w-7xl gap-6 px-4 py-6">
+      <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
         {showChrome && <ProfileSidebar />}
         <div className="min-w-0 flex-1">
           <Routes>
