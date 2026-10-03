@@ -687,3 +687,23 @@ end;
 $$ language plpgsql security definer stable;
 
 grant execute on function search_profiles(text) to authenticated;
+
+-- ============================================================
+-- Public profile lookup (bypasses the friend/follow-only profile RLS on
+-- purpose, for the public card shown on anyone's profile page - see
+-- migration 010; resume/calendar/pipeline stay behind the normal gate)
+-- ============================================================
+create function get_public_profile(p_user_id uuid)
+returns table(
+  id uuid, username text, full_name text, avatar_url text,
+  school text, linkedin_url text, github_url text
+) as $$
+begin
+  return query
+    select p.id, p.username, p.full_name, p.avatar_url, p.school, p.linkedin_url, p.github_url
+    from profiles p
+    where p.id = p_user_id;
+end;
+$$ language plpgsql security definer stable;
+
+grant execute on function get_public_profile(uuid) to authenticated;

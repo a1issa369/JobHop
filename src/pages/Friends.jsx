@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
 import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
 import Avatar from '../components/Avatar.jsx';
+import IconUserPlus from '../components/IconUserPlus.jsx';
 
 export default function Friends() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -126,17 +128,28 @@ export default function Friends() {
             ) : results.length > 0 ? (
               <ul className="max-h-72 overflow-y-auto">
                 {results.map((p) => (
-                  <li key={p.id} className="flex items-center gap-2 px-3 py-2 hover:bg-grid/40">
+                  <li
+                    key={p.id}
+                    onClick={() => {
+                      setOpen(false);
+                      navigate(`/friends/${p.id}`);
+                    }}
+                    className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-grid/40"
+                  >
                     <Avatar url={p.avatar_url} size={28} />
                     <span className="min-w-0 flex-1 truncate text-sm">
                       {p.full_name || p.username}
                       <span className="ml-1 text-ink2">@{p.username}</span>
                     </span>
                     <button
-                      onClick={() => sendRequest(p.id)}
-                      className="btn-secondary flex-shrink-0 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sendRequest(p.id);
+                      }}
+                      title="Add friend"
+                      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-grid/50 text-ink2 transition-colors hover:bg-grid hover:text-paper"
                     >
-                      Add
+                      <IconUserPlus className="h-3.5 w-3.5" />
                     </button>
                   </li>
                 ))}

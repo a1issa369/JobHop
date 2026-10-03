@@ -19,11 +19,20 @@ const LEVEL_COLORS = [
   'bg-signal'
 ];
 
+// All sizing in real pixels, not Tailwind gap classes - the column spacing
+// has to match EXACTLY between the cell grid and the month labels above
+// it, and a mismatch there (14px cells with a 4px Tailwind gap, against
+// labels positioned assuming 16px) is what made the whole strip drift out
+// of alignment by the time it reached the later months.
+const CELL = 14;
+const GAP = 3;
+const MONTH_GAP = 9; // extra breathing room between one month's columns and the next
+const PITCH = CELL + GAP;
+
 // Classic GitHub-style contribution graph: one column per week (Sunday on
 // top, Saturday on the bottom) running across the whole current year, with
-// a month label over the column where that month starts. Back to this
-// layout (rather than a 12-block month grid) since it's the one that
-// actually fit cleanly in the page.
+// a small gap opening up between months so it's visually obvious where one
+// ends and the next begins, not just the label to go on.
 function buildWeeks(year, leadingBlanks, applicationsByDate) {
   const start = startOfYear(new Date(year, 0, 1));
   const end = endOfYear(start);
@@ -42,21 +51,32 @@ function buildWeeks(year, leadingBlanks, applicationsByDate) {
   return weeks;
 }
 
-// Places each month's label directly over the column that contains that
-// month's 1st, found by date arithmetic rather than by scanning each
-// week's first cell. Scanning the first cell got this wrong whenever a
-// month started mid-week: the label only advanced once a column's TOP
-// (Sunday) row crossed into the new month, so e.g. December's label
-// showed up a column later than December 1st actually sat, out of step
-// with the cells underneath it.
-function monthLabels(year, leadingBlanks) {
+// The week-column index that contains a given month's 1st, found by date
+// arithmetic rather than by scanning each week's first cell - scanning got
+// this wrong whenever a month started mid-week, since the label only
+// advanced once a column's TOP (Sunday) row crossed into the new month.
+function monthStartIndices(year, leadingBlanks) {
   const jan1 = startOfYear(new Date(year, 0, 1));
   return Array.from({ length: 12 }, (_, m) => {
     const firstOfMonth = new Date(year, m, 1);
     const dayIndex = differenceInCalendarDays(firstOfMonth, jan1);
-    const weekIndex = Math.floor((dayIndex + leadingBlanks) / 7);
-    return { weekIndex, label: format(firstOfMonth, 'MMM') };
+    return { weekIndex: Math.floor((dayIndex + leadingBlanks) / 7), label: format(firstOfMonth, 'MMM') };
   });
+}
+
+// Every week column's left pixel offset, walking left to right and adding
+// an extra MONTH_GAP right before whichever column starts a new month -
+// labels and cells are both positioned from this one array, so they can
+// never drift apart from each other.
+function columnPositions(weekCount, monthStarts) {
+  const startSet = new Set(monthStarts.map((m) => m.weekIndex));
+  const positions = [];
+  let x = 0;
+  for (let i = 0; i < weekCount; i++) {
+    if (i > 0) x += PITCH + (startSet.has(i) ? MONTH_GAP : 0);
+    positions.push(x);
+  }
+  return positions;
 }
 
 export default function CalendarHeatmap({ applicationsByDate }) {
@@ -69,7 +89,9 @@ export default function CalendarHeatmap({ applicationsByDate }) {
     () => buildWeeks(year, leadingBlanks, applicationsByDate),
     [year, leadingBlanks, applicationsByDate]
   );
-  const labels = useMemo(() => monthLabels(year, leadingBlanks), [year, leadingBlanks]);
+  const monthStarts = useMemo(() => monthStartIndices(year, leadingBlanks), [year, leadingBlanks]);
+  const positions = useMemo(() => columnPositions(weeks.length, monthStarts), [weeks.length, monthStarts]);
+  const totalWidth = (positions.at(-1) ?? 0) + CELL;
 
   return (
     <div className="card-surface p-4">
@@ -85,21 +107,21 @@ export default function CalendarHeatmap({ applicationsByDate }) {
       </div>
 
       <div className="mt-4 overflow-x-auto">
-        <div className="relative" style={{ width: weeks.length * 16 }}>
+        <div className="relative" style={{ width: totalWidth }}>
           <div className="relative h-4">
-            {labels.map((l) => (
+            {monthStarts.map((m) => (
               <span
-                key={l.weekIndex}
+                key={m.label}
                 className="absolute top-0 whitespace-nowrap text-[10px] text-ink2"
-                style={{ left: l.weekIndex * 16 }}
+                style={{ left: positions[m.weekIndex] }}
               >
-                {l.label}
+                {m.label}
               </span>
             ))}
           </div>
-          <div className="mt-1 flex gap-1">
+          <div className="relative mt-1" style={{ height: 7 * PITCH - GAP }}>
             {weeks.map((week, wi) => (
-              <div key={wi} className="flex flex-col gap-1">
+              <div key={wi} className="absolute top-0" style={{ left: positions[wi], width: CELL }}>
                 {week.map((cell, di) =>
                   cell ? (
                     <div
@@ -107,11 +129,10 @@ export default function CalendarHeatmap({ applicationsByDate }) {
                       title={`${format(cell.date, 'MMM d, yyyy')}: ${cell.count} application${
                         cell.count === 1 ? '' : 's'
                       }`}
-                      className={`h-3.5 w-3.5 rounded-sm ${LEVEL_COLORS[levelFor(cell.count, max)]}`}
+                      className={`rounded-sm ${LEVEL_COLORS[levelFor(cell.count, max)]}`}
+                      style={{ position: 'absolute', top: di * PITCH, width: CELL, height: CELL }}
                     />
-                  ) : (
-                    <div key={di} className="h-3.5 w-3.5" />
-                  )
+                  ) : null
                 )}
               </div>
             ))}

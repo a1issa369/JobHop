@@ -4,10 +4,30 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useProfileContext } from '../context/ProfileContext.jsx';
 import { useViewedProfile } from '../context/ViewedProfileContext.jsx';
 import { useFollowStats } from '../hooks/useFollowStats.js';
+import { useFriendStatus } from '../hooks/useFriendStatus.js';
 import { getResumeSignedUrl, uploadResume } from '../utils/resume.js';
 import ChallengeWidget from './ChallengeWidget.jsx';
 import DefaultAvatar from './DefaultAvatar.jsx';
 import FollowersModal from './FollowersModal.jsx';
+import IconUserPlus from './IconUserPlus.jsx';
+
+// Icon-only "add friend" button - just the person-with-a-plus glyph, no
+// label - for sending or having sent a request. A request someone else
+// sent you needs more than an icon can carry, so that case is handled by
+// the caller instead (a full-width Accept/Decline row).
+function AddFriendButton({ status, busy, onClick }) {
+  if (status === 'accepted' || status === 'pending_received') return null;
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy || status === 'pending_sent'}
+      title={status === 'pending_sent' ? 'Friend request sent' : 'Add friend'}
+      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-grid/50 text-ink2 transition-colors hover:bg-grid hover:text-paper disabled:opacity-50"
+    >
+      <IconUserPlus className="h-4 w-4" />
+    </button>
+  );
+}
 
 // Small shared row: "123 followers" / "456 following" as two buttons that
 // open the followers/following modal scoped to whichever profile this
@@ -73,6 +93,7 @@ function ViewedProfileCard({ viewed }) {
   const { user } = useAuth();
   const { followers, following, amFollowing, loading: statsLoading, busy, follow, unfollow } =
     useFollowStats(profile.id);
+  const friendStatus = useFriendStatus(profile.id);
   const isSelf = user?.id === profile.id;
 
   return (
@@ -98,13 +119,40 @@ function ViewedProfileCard({ viewed }) {
           <FollowCounts userId={profile.id} followers={followers} following={following} />
 
           {!isSelf && (
-            <button
-              onClick={() => (amFollowing ? unfollow() : follow())}
-              disabled={statsLoading || busy}
-              className={amFollowing ? 'btn-secondary mt-3 w-full text-xs' : 'btn-primary mt-3 w-full text-xs'}
-            >
-              {busy ? '…' : amFollowing ? 'Following' : 'Follow'}
-            </button>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => (amFollowing ? unfollow() : follow())}
+                  disabled={statsLoading || busy}
+                  className={amFollowing ? 'btn-secondary flex-1 text-xs' : 'btn-primary flex-1 text-xs'}
+                >
+                  {busy ? '…' : amFollowing ? 'Following' : 'Follow'}
+                </button>
+                <AddFriendButton
+                  status={friendStatus.status}
+                  busy={friendStatus.busy}
+                  onClick={friendStatus.sendRequest}
+                />
+              </div>
+              {friendStatus.status === 'pending_received' && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => friendStatus.respond(true)}
+                    disabled={friendStatus.busy}
+                    className="btn-primary flex-1 text-xs"
+                  >
+                    Accept friend request
+                  </button>
+                  <button
+                    onClick={() => friendStatus.respond(false)}
+                    disabled={friendStatus.busy}
+                    className="btn-secondary flex-1 text-xs"
+                  >
+                    Decline
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {(profile.linkedin_url || profile.github_url) && (
