@@ -66,7 +66,7 @@ function normalizeUrl(value) {
 
 function ProfileSection() {
   const { user } = useAuth();
-  const { profile, loading, refresh } = useOwnProfile(user.id);
+  const { profile, loading, error: loadError, refresh } = useOwnProfile(user.id);
   const [form, setForm] = useState(null);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -84,7 +84,21 @@ function ProfileSection() {
     });
   }
 
-  if (loading || !form) return <p className="text-sm text-ink2">Loading…</p>;
+  if (loading) return <p className="text-sm text-ink2">Loading…</p>;
+
+  if (loadError || !profile) {
+    return (
+      <div className="card-surface p-5">
+        <p className="text-sm text-bad">Couldn't load your profile.</p>
+        <p className="mt-1 text-xs text-ink2">{loadError?.message ?? 'Unknown error.'}</p>
+        <button onClick={refresh} className="btn-secondary mt-3 text-xs">
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (!form) return <p className="text-sm text-ink2">Loading…</p>;
 
   async function handleSubmit(e) {
     e.preventDefault();

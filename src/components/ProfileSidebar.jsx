@@ -3,27 +3,44 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useOwnProfile } from '../hooks/useOwnProfile.js';
 import { getResumeSignedUrl, uploadResume } from '../utils/resume.js';
+import DefaultAvatar from './DefaultAvatar.jsx';
 
 // Stays mounted alongside the routed page content (see App.jsx) rather than
 // living inside any one page, so it's present - and keeps its own state -
 // across every screen instead of re-fetching each time you navigate.
 export default function ProfileSidebar() {
   const { user } = useAuth();
-  const { profile, followers, following, loading, refresh } = useOwnProfile(user?.id);
+  const { profile, followers, following, loading, error, refresh } = useOwnProfile(user?.id);
   const [resumeBusy, setResumeBusy] = useState(false);
   const [resumeError, setResumeError] = useState('');
   const fileInputRef = useRef(null);
 
-  if (loading || !profile) {
+  // "Still fetching" and "fetch failed" are different states - conflating
+  // them is what made this sidebar get stuck on "Loading profile..."
+  // forever when the query errored (e.g. a migration hadn't been run yet).
+  if (loading) {
     return (
-      <aside className="hidden w-72 flex-shrink-0 lg:block">
+      <aside className="hidden w-80 flex-shrink-0 lg:block">
         <div className="sticky top-20 card-surface p-5 text-sm text-ink2">Loading profile…</div>
       </aside>
     );
   }
 
+  if (error || !profile) {
+    return (
+      <aside className="hidden w-80 flex-shrink-0 lg:block">
+        <div className="sticky top-20 card-surface p-5 text-sm">
+          <p className="text-bad">Couldn't load your profile.</p>
+          <p className="mt-1 text-xs text-ink2">{error?.message ?? 'Unknown error.'}</p>
+          <button onClick={refresh} className="btn-secondary mt-3 w-full text-xs">
+            Try again
+          </button>
+        </div>
+      </aside>
+    );
+  }
+
   const displayName = profile.full_name || profile.username;
-  const initial = displayName ? displayName[0].toUpperCase() : '?';
 
   async function handleResumeChange(e) {
     const file = e.target.files?.[0];
@@ -46,7 +63,7 @@ export default function ProfileSidebar() {
   }
 
   return (
-    <aside className="hidden w-72 flex-shrink-0 lg:block">
+    <aside className="hidden w-80 flex-shrink-0 lg:block">
       <div className="sticky top-20 space-y-4">
         <div className="card-surface p-5 text-center">
           {profile.avatar_url ? (
@@ -56,8 +73,8 @@ export default function ProfileSidebar() {
               className="mx-auto h-16 w-16 rounded-full object-cover"
             />
           ) : (
-            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-route/30 text-xl font-semibold text-paper">
-              {initial}
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-panel">
+              <DefaultAvatar className="h-10 w-10" />
             </span>
           )}
 

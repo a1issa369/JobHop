@@ -1,6 +1,7 @@
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useOwnProfile } from '../hooks/useOwnProfile.js';
+import DefaultAvatar from './DefaultAvatar.jsx';
 
 // A small hover-highlighted avatar, separate from the left-hand
 // ProfileSidebar - clicking it opens the full Profile page (stats,
@@ -8,18 +9,17 @@ import { useOwnProfile } from '../hooks/useOwnProfile.js';
 // the two stay clearly separate destinations.
 function AvatarLink({ userId }) {
   const { profile } = useOwnProfile(userId);
-  const initial = (profile?.full_name || profile?.username || '?')[0]?.toUpperCase() ?? '?';
 
   return (
     <Link
       to="/profile"
       title="View your profile"
-      className="ml-1 flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-route/30 text-xs font-semibold text-paper ring-2 ring-transparent transition-all duration-150 hover:scale-110 hover:ring-route"
+      className="ml-1 flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel ring-2 ring-transparent transition-all duration-150 hover:scale-110 hover:ring-route"
     >
       {profile?.avatar_url ? (
         <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
       ) : (
-        initial
+        <DefaultAvatar className="h-5 w-5" />
       )}
     </Link>
   );

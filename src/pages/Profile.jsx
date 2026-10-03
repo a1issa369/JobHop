@@ -6,6 +6,7 @@ import { useOwnProfile } from '../hooks/useOwnProfile.js';
 import { getResumeSignedUrl } from '../utils/resume.js';
 import CalendarHeatmap from '../components/CalendarHeatmap.jsx';
 import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
+import DefaultAvatar from '../components/DefaultAvatar.jsx';
 import { computeMonthlyScore } from '../utils/score.js';
 
 // Reached by clicking the avatar in the navbar - deliberately a separate
@@ -15,7 +16,14 @@ import { computeMonthlyScore } from '../utils/score.js';
 // what a friend sees when they look you up.
 export default function Profile() {
   const { user } = useAuth();
-  const { profile, followers, following, loading: profileLoading } = useOwnProfile(user.id);
+  const {
+    profile,
+    followers,
+    following,
+    loading: profileLoading,
+    error: profileError,
+    refresh: refreshProfile
+  } = useOwnProfile(user.id);
   const [resumeUrl, setResumeUrl] = useState(null);
   const [applications, setApplications] = useState([]);
   const [stageHistory, setStageHistory] = useState([]);
@@ -50,8 +58,20 @@ export default function Profile() {
     }
   }, [profile?.resume_url]);
 
-  if (profileLoading || loading || !profile) {
+  if (profileLoading || loading) {
     return <p className="text-sm text-ink2">Loading profile…</p>;
+  }
+
+  if (profileError || !profile) {
+    return (
+      <div className="card-surface p-5">
+        <p className="text-sm text-bad">Couldn't load your profile.</p>
+        <p className="mt-1 text-xs text-ink2">{profileError?.message ?? 'Unknown error.'}</p>
+        <button onClick={refreshProfile} className="btn-secondary mt-3 text-xs">
+          Try again
+        </button>
+      </div>
+    );
   }
 
   const applicationsByDate = {};
@@ -75,8 +95,8 @@ export default function Profile() {
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="" className="h-16 w-16 rounded-full object-cover" />
           ) : (
-            <span className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-route/30 text-2xl font-semibold text-paper">
-              {displayName[0]?.toUpperCase()}
+            <span className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-panel">
+              <DefaultAvatar className="h-10 w-10" />
             </span>
           )}
           <div>

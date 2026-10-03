@@ -14,24 +14,31 @@ export function useOwnProfile(userId) {
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [loading, setLoading] = useState(true);
+  // Distinct from "still loading" - set when the profile select itself came
+  // back with an error (e.g. a migration hasn't been run yet and a selected
+  // column doesn't exist), so consumers can show a real error instead of
+  // treating a failed fetch as a permanent loading state.
+  const [error, setError] = useState(null);
 
   const refresh = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
-    const [{ data: p }, { count: followingCount }, { count: followerCount }] = await Promise.all([
-      supabase.from('profiles').select(PROFILE_FIELDS).eq('id', userId).single(),
-      supabase
-        .from('friendships')
-        .select('id', { count: 'exact', head: true })
-        .eq('requester_id', userId)
-        .eq('status', 'accepted'),
-      supabase
-        .from('friendships')
-        .select('id', { count: 'exact', head: true })
-        .eq('addressee_id', userId)
-        .eq('status', 'accepted')
-    ]);
+    const [{ data: p, error: pErr }, { count: followingCount }, { count: followerCount }] =
+      await Promise.all([
+        supabase.from('profiles').select(PROFILE_FIELDS).eq('id', userId).single(),
+        supabase
+          .from('friendships')
+          .select('id', { count: 'exact', head: true })
+          .eq('requester_id', userId)
+          .eq('status', 'accepted'),
+        supabase
+          .from('friendships')
+          .select('id', { count: 'exact', head: true })
+          .eq('addressee_id', userId)
+          .eq('status', 'accepted')
+      ]);
     setProfile(p ?? null);
+    setError(pErr ?? null);
     setFollowing(followingCount ?? 0);
     setFollowers(followerCount ?? 0);
     setLoading(false);
@@ -41,5 +48,5 @@ export function useOwnProfile(userId) {
     refresh();
   }, [refresh]);
 
-  return { profile, followers, following, loading, refresh };
+  return { profile, followers, following, loading, error, refresh };
 }
