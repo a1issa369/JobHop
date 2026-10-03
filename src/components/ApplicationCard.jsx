@@ -52,11 +52,9 @@ export default function ApplicationCard({ application, onClick }) {
         </span>
       </div>
 
-      {(application.follow_up_date || deadlineSoon) && (
+      {application.deadline && (
         <div className="mt-1 flex items-center gap-2 border-t border-grid pt-2 text-[11px] text-ink2">
-          {application.follow_up_date && (
-            <span>Follow up: {format(parseISO(application.follow_up_date), 'MMM d')}</span>
-          )}
+          <span>Deadline: {format(parseISO(application.deadline), 'MMM d')}</span>
           {deadlineSoon && (
             <span className="rounded bg-bad/20 px-1.5 py-0.5 font-medium text-bad">due soon</span>
           )}

@@ -1,14 +1,16 @@
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useOwnProfile } from '../hooks/useOwnProfile.js';
+import { useProfileContext } from '../context/ProfileContext.jsx';
 import DefaultAvatar from './DefaultAvatar.jsx';
 
 // A small hover-highlighted avatar, separate from the left-hand
 // ProfileSidebar - clicking it opens the full Profile page (stats,
 // activity, resume) rather than anything about the job-tracker board, so
-// the two stay clearly separate destinations.
-function AvatarLink({ userId }) {
-  const { profile } = useOwnProfile(userId);
+// the two stay clearly separate destinations. Reads from the same shared
+// ProfileContext as the sidebar, so a new avatar uploaded in Settings
+// shows up here immediately too.
+function AvatarLink() {
+  const { profile } = useProfileContext();
 
   return (
     <Link
@@ -66,7 +68,7 @@ export default function Navbar() {
           >
             Sign out
           </button>
-          {user && <AvatarLink userId={user.id} />}
+          {user && <AvatarLink />}
         </nav>
       </div>
     </header>

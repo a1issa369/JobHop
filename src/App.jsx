@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
+import { ProfileProvider } from './context/ProfileContext.jsx';
+import { ViewedProfileProvider } from './context/ViewedProfileContext.jsx';
 import Navbar from './components/Navbar.jsx';
 import ProfileSidebar from './components/ProfileSidebar.jsx';
 import Login from './pages/Login.jsx';
@@ -35,68 +37,84 @@ export default function App() {
   // (nav bar, profile sidebar) stays hidden there too.
   const showChrome = Boolean(user) && location.pathname !== '/reset-password';
 
+  const routes = (
+    <Routes>
+      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup />} />
+      <Route
+        path="/forgot-password"
+        element={user ? <Navigate to="/" replace /> : <ForgotPassword />}
+      />
+      {/* Not gated on `user` like the routes above: clicking a valid
+          reset link signs the browser into a temporary recovery
+          session, so `user` is already truthy by the time this page
+          loads - redirecting to "/" here would skip the reset form
+          entirely and strand the person on the dashboard. */}
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route
+        path="/"
+        element={
+          <Protected>
+            <Dashboard />
+          </Protected>
+        }
+      />
+      <Route
+        path="/friends"
+        element={
+          <Protected>
+            <Friends />
+          </Protected>
+        }
+      />
+      <Route
+        path="/friends/:friendId"
+        element={
+          <Protected>
+            <FriendProfile />
+          </Protected>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <Protected>
+            <Profile />
+          </Protected>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <Protected>
+            <Settings />
+          </Protected>
+        }
+      />
+    </Routes>
+  );
+
+  if (!showChrome) {
+    return (
+      <div className="min-h-screen">
+        <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
+          <div className="min-w-0 flex-1">{routes}</div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
-      {showChrome && <Navbar />}
-      <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
-        {showChrome && <ProfileSidebar />}
-        <div className="min-w-0 flex-1">
-          <Routes>
-          <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-          <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup />} />
-          <Route
-            path="/forgot-password"
-            element={user ? <Navigate to="/" replace /> : <ForgotPassword />}
-          />
-          {/* Not gated on `user` like the routes above: clicking a valid
-              reset link signs the browser into a temporary recovery
-              session, so `user` is already truthy by the time this page
-              loads - redirecting to "/" here would skip the reset form
-              entirely and strand the person on the dashboard. */}
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route
-            path="/"
-            element={
-              <Protected>
-                <Dashboard />
-              </Protected>
-            }
-          />
-          <Route
-            path="/friends"
-            element={
-              <Protected>
-                <Friends />
-              </Protected>
-            }
-          />
-          <Route
-            path="/friends/:friendId"
-            element={
-              <Protected>
-                <FriendProfile />
-              </Protected>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <Protected>
-                <Profile />
-              </Protected>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <Protected>
-                <Settings />
-              </Protected>
-            }
-          />
-        </Routes>
-        </div>
-      </main>
+      <ViewedProfileProvider>
+        <ProfileProvider userId={user.id}>
+          <Navbar />
+          <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
+            <ProfileSidebar />
+            <div className="min-w-0 flex-1">{routes}</div>
+          </main>
+        </ProfileProvider>
+      </ViewedProfileProvider>
     </div>
   );
 }

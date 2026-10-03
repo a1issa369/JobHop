@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useOwnProfile } from '../hooks/useOwnProfile.js';
+import { useProfileContext } from '../context/ProfileContext.jsx';
 import { analyzePassword, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/password.js';
 import { uploadAvatar } from '../utils/avatar.js';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter.jsx';
@@ -68,7 +68,7 @@ function normalizeUrl(value) {
 
 function ProfileSection() {
   const { user } = useAuth();
-  const { profile, loading, error: loadError, refresh } = useOwnProfile(user.id);
+  const { profile, loading, error: loadError, refresh } = useProfileContext();
   const [form, setForm] = useState(null);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);

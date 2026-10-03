@@ -4,11 +4,12 @@ import {
   endOfYear,
   format,
   getDay,
+  getMonth,
   startOfYear
 } from 'date-fns';
 
 // Restricted to the current year, per spec: Jan 1 -> Dec 31 of this year only.
-function buildYearGrid(countsByDate) {
+function buildYearGrid() {
   const year = new Date().getFullYear();
   const start = startOfYear(new Date(year, 0, 1));
   const end = endOfYear(new Date(year, 0, 1));
@@ -37,6 +38,10 @@ const LEVEL_COLORS = [
   'bg-signal'
 ];
 
+// Mon/Wed/Fri only (GitHub's own convention) - labeling every row is just
+// clutter at this cell size.
+const WEEKDAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+
 export default function CalendarHeatmap({ applicationsByDate }) {
   const { days, leadingBlanks, year } = useMemo(() => buildYearGrid(), []);
 
@@ -57,6 +62,23 @@ export default function CalendarHeatmap({ applicationsByDate }) {
     return result;
   }, [days, leadingBlanks, applicationsByDate]);
 
+  // One label per week column, shown only on the week a new month actually
+  // starts - without this a bare grid of squares reads as "a wall of
+  // nothing" rather than a calendar, which was the real complaint.
+  const monthLabels = useMemo(() => {
+    let lastMonth = -1;
+    return weeks.map((week) => {
+      const firstRealDay = week.find((c) => c);
+      if (!firstRealDay) return '';
+      const month = getMonth(firstRealDay.date);
+      if (month !== lastMonth) {
+        lastMonth = month;
+        return format(firstRealDay.date, 'MMM');
+      }
+      return '';
+    });
+  }, [weeks]);
+
   return (
     <div className="card-surface p-4">
       <div className="flex items-center justify-between">
@@ -70,24 +92,40 @@ export default function CalendarHeatmap({ applicationsByDate }) {
         </div>
       </div>
 
-      <div className="mt-3 flex gap-1 overflow-x-auto pb-2">
-        {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-1">
-            {week.map((cell, di) =>
-              cell ? (
-                <div
-                  key={di}
-                  title={`${format(cell.date, 'MMM d, yyyy')}: ${cell.count} application${
-                    cell.count === 1 ? '' : 's'
-                  }`}
-                  className={`h-3 w-3 rounded-sm ${LEVEL_COLORS[levelFor(cell.count, max)]}`}
-                />
-              ) : (
-                <div key={di} className="h-3 w-3" />
-              )
-            )}
+      <div className="mt-4 overflow-x-auto pb-2">
+        <div className="flex gap-1 pl-7">
+          {monthLabels.map((label, i) => (
+            <div key={i} className="w-3 flex-shrink-0 text-[10px] leading-3 text-ink2">
+              {label}
+            </div>
+          ))}
+        </div>
+        <div className="mt-1 flex gap-1">
+          <div className="flex flex-shrink-0 flex-col gap-1 pr-1">
+            {WEEKDAY_LABELS.map((label, i) => (
+              <div key={i} className="h-3 w-6 text-right text-[10px] leading-3 text-ink2">
+                {label}
+              </div>
+            ))}
           </div>
-        ))}
+          {weeks.map((week, wi) => (
+            <div key={wi} className="flex flex-col gap-1">
+              {week.map((cell, di) =>
+                cell ? (
+                  <div
+                    key={di}
+                    title={`${format(cell.date, 'MMM d, yyyy')}: ${cell.count} application${
+                      cell.count === 1 ? '' : 's'
+                    }`}
+                    className={`h-3 w-3 rounded-sm ${LEVEL_COLORS[levelFor(cell.count, max)]}`}
+                  />
+                ) : (
+                  <div key={di} className="h-3 w-3" />
+                )
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

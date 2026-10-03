@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { STAGES, WORK_TYPES } from '../utils/stageConfig';
 
 // Only company, role, and stage are required to create a card. Everything
-// else (deadline, follow-up, notes, location, work type) is optional detail
-// added later.
+// else (deadline, notes, location, work type) is optional detail added
+// later.
 const schema = z.object({
   company: z.string().min(1, 'Company is required').max(100),
   role: z.string().min(1, 'Role is required').max(100),
@@ -12,7 +12,6 @@ const schema = z.object({
   location: z.string().max(100).optional().or(z.literal('')),
   work_type: z.enum(['remote', 'hybrid', 'onsite']).optional().or(z.literal('')),
   deadline: z.string().optional().or(z.literal('')),
-  follow_up_date: z.string().optional().or(z.literal('')),
   notes: z.string().max(2000).optional().or(z.literal(''))
 });
 
@@ -27,7 +26,6 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
       location: '',
       work_type: '',
       deadline: '',
-      follow_up_date: '',
       notes: ''
     }
   );
@@ -123,7 +121,6 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
             <Field label="Location">
               <input
                 className="input"
-                placeholder="San Diego, CA"
                 value={form.location ?? ''}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
               />
@@ -144,24 +141,14 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Deadline">
-              <input
-                type="date"
-                className="input"
-                value={form.deadline ?? ''}
-                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-              />
-            </Field>
-            <Field label="Follow-up date">
-              <input
-                type="date"
-                className="input"
-                value={form.follow_up_date ?? ''}
-                onChange={(e) => setForm({ ...form, follow_up_date: e.target.value })}
-              />
-            </Field>
-          </div>
+          <Field label="Deadline">
+            <input
+              type="date"
+              className="input"
+              value={form.deadline ?? ''}
+              onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+            />
+          </Field>
 
           <Field label="Notes">
             <textarea
