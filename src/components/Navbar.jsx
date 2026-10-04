@@ -106,8 +106,8 @@ function AvatarMenu() {
           >
             Notifications
             {unreadCount > 0 && (
-              <span className="rounded-full bg-signal px-1.5 py-0.5 text-[10px] font-bold text-ink">
-                {unreadCount}
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-bad px-1 text-[10px] font-bold text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
@@ -140,7 +140,17 @@ export default function Navbar() {
   const viewingSomeoneElse = Boolean(friendMatch);
 
   return (
-    <header className="border-b border-grid bg-panel/80 backdrop-blur">
+    // `relative z-20` here is what keeps the avatar dropdown (and anything
+    // else absolutely positioned inside this header) painted above the page
+    // content below it. Without an explicit z-index, `backdrop-blur` makes
+    // the header establish its own stacking context, which traps the
+    // dropdown's z-10 *inside* that context instead of letting it compete
+    // with `main`'s content - so with no z-index of its own, the header
+    // (and everything inside it, including an open dropdown) ends up
+    // painted BEHIND `main` simply because `main` comes later in the DOM.
+    // That's what caused a Board stage count to visibly show through the
+    // open dropdown menu.
+    <header className="relative z-20 border-b border-grid bg-panel/80 backdrop-blur">
       <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
