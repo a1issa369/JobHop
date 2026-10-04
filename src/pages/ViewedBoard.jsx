@@ -108,8 +108,11 @@ export default function ViewedBoard() {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      // applications_public masks the `notes` column to null for anyone
+      // but the row's own owner (see migration 014) - everything else
+      // about an application stays public, same as before.
       const { data } = await supabase
-        .from('applications')
+        .from('applications_public')
         .select('*')
         .eq('user_id', profile.id)
         .order('created_at');
