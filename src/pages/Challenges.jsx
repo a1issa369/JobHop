@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useProfileContext } from '../context/ProfileContext.jsx';
 import { useChallenges } from '../hooks/useChallenges.js';
+import { useToast } from '../context/ToastContext.jsx';
 import DuelVersus from '../components/DuelVersus.jsx';
 import StairsLoader from '../components/StairsLoader.jsx';
 
@@ -53,6 +54,21 @@ export default function Challenges() {
   const { user } = useAuth();
   const { profile: myProfile } = useProfileContext();
   const { incoming, outgoing, active, history, loading, error, respond, cancel } = useChallenges();
+  const showToast = useToast();
+
+  // Accepting a request (or, less likely, cancelling one) can fail here if
+  // the 2-active-duel cap is hit in the meantime - e.g. another duel of
+  // yours just started while this request sat waiting - so both go through
+  // a toast rather than failing silently.
+  async function handleRespond(id, accept) {
+    const { error: err } = await respond(id, accept);
+    if (err) showToast(err.message);
+  }
+
+  async function handleCancel(id) {
+    const { error: err } = await cancel(id);
+    if (err) showToast(err.message);
+  }
 
   if (loading) return <StairsLoader />;
 
@@ -63,6 +79,7 @@ export default function Challenges() {
         <p className="text-sm text-ink2">
           Challenge a friend to 1-7 days of applying - whoever submits more wins.
         </p>
+        <p className="mt-1 text-xs text-ink2">You can be in up to 2 duels at the same time.</p>
       </div>
 
       {error && <p className="text-sm text-bad">{error}</p>}
@@ -87,10 +104,10 @@ export default function Challenges() {
                     </p>
                   </div>
                   <div className="flex flex-shrink-0 gap-2">
-                    <button onClick={() => respond(c.id, true)} className="btn-primary text-xs">
+                    <button onClick={() => handleRespond(c.id, true)} className="btn-primary text-xs">
                       Accept
                     </button>
-                    <button onClick={() => respond(c.id, false)} className="btn-secondary text-xs">
+                    <button onClick={() => handleRespond(c.id, false)} className="btn-secondary text-xs">
                       Decline
                     </button>
                   </div>
@@ -120,7 +137,7 @@ export default function Challenges() {
                       {c.duration_days}-day duel · waiting on them
                     </p>
                   </div>
-                  <button onClick={() => cancel(c.id)} className="btn-secondary flex-shrink-0 text-xs">
+                  <button onClick={() => handleCancel(c.id)} className="btn-secondary flex-shrink-0 text-xs">
                     Cancel
                   </button>
                 </DuelCard>

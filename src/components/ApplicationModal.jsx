@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { z } from 'zod';
+import { format } from 'date-fns';
 import { STAGES, WORK_TYPES } from '../utils/stageConfig';
+import { useToast } from '../context/ToastContext.jsx';
 
 // Only company, role, and stage are required to create a card. Everything
 // else (deadline, notes, location, work type) is optional detail added
@@ -41,6 +43,7 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
   const [touched, setTouched] = useState({});
   const [attempted, setAttempted] = useState(false);
   const [error, setError] = useState('');
+  const showToast = useToast();
   const isEdit = Boolean(initial?.id);
 
   function isEmpty(field) {
@@ -57,12 +60,31 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
     setTouched((t) => ({ ...t, [field]: true }));
   }
 
+  // Only warns when the user is actively setting/changing the deadline to a
+  // new past date - comparing against initial?.deadline rather than just
+  // "is this before today" so re-saving an older card whose deadline already
+  // lapsed (a normal, common case) doesn't get blocked on every edit.
+  // Compared as plain 'yyyy-MM-dd' strings (what the date input already
+  // gives us) rather than parsing to Date objects, so there's no UTC/local
+  // timezone conversion to get wrong.
+  function isNewPastDeadline() {
+    const deadline = form.deadline;
+    if (!deadline) return false;
+    if (deadline === (initial?.deadline ?? '')) return false;
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return deadline < today;
+  }
+
   function handleSubmit(e) {
     e.preventDefault();
     setAttempted(true);
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
       setError(parsed.error.issues[0].message);
+      return;
+    }
+    if (isNewPastDeadline()) {
+      showToast("That deadline is in the past - double check the date.");
       return;
     }
     setError('');

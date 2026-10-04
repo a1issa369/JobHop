@@ -7,6 +7,7 @@ import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
 import Avatar from '../components/Avatar.jsx';
 import FollowListPanel from '../components/FollowListPanel.jsx';
 import IconUserPlus from '../components/IconUserPlus.jsx';
+import ErrorBanner from '../components/ErrorBanner.jsx';
 
 export default function Friends() {
   const { user } = useAuth();
@@ -18,6 +19,12 @@ export default function Friends() {
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState([]);
+  // id -> 'pending' | 'accepted' | 'blocked' for everyone with ANY existing
+  // friendship row with you, in either direction - used to hide the
+  // add-friend button in search results for someone you already have a
+  // relationship with (previously showed unconditionally, even for an
+  // already-accepted friend or a request already sent/received).
+  const [relationships, setRelationships] = useState({});
   const [error, setError] = useState('');
   const debounceRef = useRef(null);
   const boxRef = useRef(null);
@@ -35,15 +42,18 @@ export default function Friends() {
       .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
 
     const incoming = [];
+    const relMap = {};
     for (const f of data ?? []) {
       const otherIsRequester = f.requester_id === user.id;
       const otherProfile = otherIsRequester ? f.addressee : f.requester;
       const otherId = otherIsRequester ? f.addressee_id : f.requester_id;
+      relMap[otherId] = f.status;
       if (f.status === 'pending' && f.addressee_id === user.id) {
         incoming.push({ friendshipId: f.id, id: otherId, ...otherProfile });
       }
     }
     setPending(incoming);
+    setRelationships(relMap);
   }
 
   // Also re-fetches on every social graph `version` bump, so accepting or
@@ -76,6 +86,7 @@ export default function Friends() {
       return;
     }
     setSearching(true);
+    setError('');
     debounceRef.current = setTimeout(async () => {
       const { data, error: searchErr } = await supabase.rpc('search_profiles', { p_query: query });
       if (searchErr) setError(searchErr.message);
@@ -89,6 +100,7 @@ export default function Friends() {
   async function sendRequest(addresseeId) {
     if (inFlightRef.current.has(addresseeId)) return;
     inFlightRef.current.add(addresseeId);
+    setError('');
     try {
       const { error: reqErr } = await withRateLimit(
         `friend_request:${user.id}`,
@@ -115,10 +127,17 @@ export default function Friends() {
   async function respond(friendshipId, status) {
     if (inFlightRef.current.has(friendshipId)) return;
     inFlightRef.current.add(friendshipId);
+    setError('');
     try {
-      await supabase.from('friendships').update({ status }).eq('id', friendshipId);
+      const { error: respondErr } = await supabase
+        .from('friendships')
+        .update({ status })
+        .eq('id', friendshipId);
+      if (respondErr) throw respondErr;
       await loadFriends();
       bump();
+    } catch (err) {
+      setError(err.message);
     } finally {
       inFlightRef.current.delete(friendshipId);
     }
@@ -161,16 +180,18 @@ export default function Friends() {
                       {p.full_name || p.username}
                       <span className="ml-1 text-ink2">@{p.username}</span>
                     </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        sendRequest(p.id);
-                      }}
-                      title="Add friend"
-                      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-grid/50 text-ink2 transition-colors hover:bg-grid hover:text-paper"
-                    >
-                      <IconUserPlus className="h-3.5 w-3.5" />
-                    </button>
+                    {!relationships[p.id] && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sendRequest(p.id);
+                        }}
+                        title="Add friend"
+                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-grid/50 text-ink2 transition-colors hover:bg-grid hover:text-paper"
+                      >
+                        <IconUserPlus className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -181,7 +202,7 @@ export default function Friends() {
         )}
       </div>
 
-      {error && <p className="text-sm text-bad">{error}</p>}
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
 
       <FollowListPanel userId={user.id} initialTab={searchParams.get('tab') === 'following' ? 'following' : 'followers'} />
 

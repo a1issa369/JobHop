@@ -494,6 +494,17 @@ create policy "challenges_no_direct_update"
   on challenges for update
   using (false);
 
+-- Caps how many duels a user can have ACTIVE (status = 'active') at once,
+-- to 2 - see migration 015_duel_concurrency_limit.sql for the full
+-- rationale. Pending (not-yet-answered) challenges don't count against
+-- this; only a duel that's actually started does.
+create function count_active_duels(p_user_id uuid)
+returns int as $$
+  select count(*)::int from challenges
+    where status = 'active'
+      and (challenger_id = p_user_id or opponent_id = p_user_id);
+$$ language sql stable;
+
 create function create_challenge(p_opponent_id uuid, p_duration_days int)
 returns challenges as $$
 declare
@@ -504,6 +515,9 @@ begin
   end if;
   if p_duration_days < 1 or p_duration_days > 7 then
     raise exception 'Duration must be between 1 and 7 days';
+  end if;
+  if count_active_duels(auth.uid()) >= 2 then
+    raise exception 'You can only be in 2 duels at a time - finish or wait out one first';
   end if;
 
   perform check_rate_limit('create_challenge', 10, 3600);
@@ -534,6 +548,13 @@ begin
   end if;
 
   if p_accept then
+    if count_active_duels(c.opponent_id) >= 2 then
+      raise exception 'You can only be in 2 duels at a time - finish or wait out one first';
+    end if;
+    if count_active_duels(c.challenger_id) >= 2 then
+      raise exception 'The challenger is already in 2 duels right now - try again later';
+    end if;
+
     update challenges
       set status = 'active',
           starts_at = now(),
@@ -659,6 +680,7 @@ begin
 end;
 $$ language plpgsql security definer stable;
 
+grant execute on function count_active_duels(uuid) to authenticated;
 grant execute on function create_challenge(uuid, int) to authenticated;
 grant execute on function respond_to_challenge(uuid, boolean) to authenticated;
 grant execute on function cancel_challenge(uuid) to authenticated;

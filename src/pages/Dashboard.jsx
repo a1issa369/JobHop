@@ -7,6 +7,7 @@ import ConversionChart from '../components/ConversionChart.jsx';
 import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
 import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
 import StairsLoader from '../components/StairsLoader.jsx';
+import ErrorBanner from '../components/ErrorBanner.jsx';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ export default function Dashboard() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setError('');
     const [{ data: apps, error: appsErr }, { data: history, error: histErr }] = await Promise.all([
       supabase.from('applications').select('*').eq('user_id', user.id).order('created_at'),
       supabase
@@ -37,6 +39,7 @@ export default function Dashboard() {
   }, [loadData]);
 
   async function handleStageChange(applicationId, newStage) {
+    setError('');
     const previous = applications;
     const app = applications.find((a) => a.id === applicationId);
     if (!app) return;
@@ -68,6 +71,7 @@ export default function Dashboard() {
   }
 
   async function handleSave(values) {
+    setError('');
     const previous = applications;
     const existing = values.id ? applications.find((a) => a.id === values.id) : null;
     const stageChanged = Boolean(existing) && existing.stage !== values.stage;
@@ -118,6 +122,7 @@ export default function Dashboard() {
   }
 
   async function handleDelete(id) {
+    setError('');
     const { error: delErr } = await supabase.from('applications').delete().eq('id', id);
     if (delErr) {
       setError(delErr.message);
@@ -141,11 +146,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded border border-bad/40 bg-bad/10 px-3 py-2 text-sm text-bad">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
 
       {loading ? (
         <StairsLoader label="Loading board" />

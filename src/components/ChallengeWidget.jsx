@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useProfileContext } from '../context/ProfileContext.jsx';
 import { useChallenges } from '../hooks/useChallenges.js';
 import { useHeadToHead } from '../hooks/useHeadToHead.js';
+import { useToast } from '../context/ToastContext.jsx';
 import DuelVersus from './DuelVersus.jsx';
 
 const DURATIONS = [1, 2, 3, 4, 5, 6, 7];
@@ -63,8 +64,8 @@ export default function ChallengeWidget({ targetId, targetName, targetAvatar }) 
   const { challenges, loading: challengesLoading, sendChallenge, respond, cancel } = useChallenges();
   const [duration, setDuration] = useState(3);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
   const [progress, setProgress] = useState(null);
+  const showToast = useToast();
 
   const withOpponent = challenges.find(
     (c) =>
@@ -90,27 +91,30 @@ export default function ChallengeWidget({ targetId, targetName, targetAvatar }) 
 
   async function handleSend() {
     setBusy(true);
-    setError('');
+    // Covers hitting the 2-active-duel cap (count_active_duels, enforced in
+    // create_challenge) along with any other failure - a toast fits better
+    // than a banner for something this transient.
     const { error: err } = await sendChallenge(targetId, duration);
     setBusy(false);
-    if (err) setError(err.message);
+    if (err) showToast(err.message);
   }
 
   async function handleRespond(accept) {
     setBusy(true);
-    setError('');
+    // Same cap, re-checked for both sides at accept time in
+    // respond_to_challenge - either participant may have started another
+    // duel since this request was sent.
     const { error: err } = await respond(withOpponent.id, accept);
     setBusy(false);
-    if (err) setError(err.message);
+    if (err) showToast(err.message);
     else refreshRecord();
   }
 
   async function handleCancel() {
     setBusy(true);
-    setError('');
     const { error: err } = await cancel(withOpponent.id);
     setBusy(false);
-    if (err) setError(err.message);
+    if (err) showToast(err.message);
   }
 
   const { wins, draws, losses } = record ?? { wins: 0, draws: 0, losses: 0 };
@@ -135,11 +139,10 @@ export default function ChallengeWidget({ targetId, targetName, targetAvatar }) 
       <div className="space-y-4 p-4">
         <RecordBar wins={wins} draws={draws} losses={losses} />
 
-        {error && <p className="text-xs text-bad">{error}</p>}
-
         {!withOpponent && (
           <div className="space-y-2">
             <p className="text-xs text-ink2">Pick a duel length in days - most applications submitted wins.</p>
+            <p className="text-xs text-ink2">You can be in up to 2 duels at the same time.</p>
             <div className="flex gap-1">
               {DURATIONS.map((d) => (
                 <button
