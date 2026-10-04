@@ -99,15 +99,15 @@ function ViewedProfileCard({ viewed }) {
             <img
               src={profile.avatar_url}
               alt=""
-              className="mx-auto h-24 w-24 rounded-full object-cover"
+              className="mx-auto h-32 w-32 rounded-full object-cover"
             />
           ) : (
-            <span className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-panel">
-              <DefaultAvatar className="h-14 w-14" />
+            <span className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-panel">
+              <DefaultAvatar className="h-20 w-20" />
             </span>
           )}
 
-          <p className="mt-3 font-display text-lg font-semibold leading-tight">{displayName}</p>
+          <p className="mt-4 font-display text-xl font-semibold leading-tight">{displayName}</p>
           <p className="text-sm text-ink2">@{profile.username}</p>
           {profile.school && <p className="mt-1 text-xs text-ink2">{profile.school}</p>}
 
@@ -262,15 +262,15 @@ function OwnProfileCard() {
             <img
               src={profile.avatar_url}
               alt=""
-              className="mx-auto h-24 w-24 rounded-full object-cover"
+              className="mx-auto h-32 w-32 rounded-full object-cover"
             />
           ) : (
-            <span className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-panel">
-              <DefaultAvatar className="h-14 w-14" />
+            <span className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-panel">
+              <DefaultAvatar className="h-20 w-20" />
             </span>
           )}
 
-          <p className="mt-3 font-display text-lg font-semibold leading-tight">{displayName}</p>
+          <p className="mt-4 font-display text-xl font-semibold leading-tight">{displayName}</p>
           <p className="text-sm text-ink2">@{profile.username}</p>
           {profile.school && <p className="mt-1 text-xs text-ink2">{profile.school}</p>}
 

@@ -5,6 +5,7 @@ import CalendarHeatmap from '../components/CalendarHeatmap.jsx';
 import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
 import MonthlyStats from '../components/MonthlyStats.jsx';
 import { localDateKey, startOfLocalYearISO } from '../utils/date.js';
+import LanternLoader from '../components/LanternLoader.jsx';
 
 // The index route for /friends/:friendId - what you land on after clicking
 // a name anywhere in the app (search, a friend card, a duel). Same stats +
@@ -56,7 +57,7 @@ export default function ViewedOverview() {
     return (
       <div className="space-y-6">
         {backLink}
-        <p className="text-sm text-ink2">Loading…</p>
+        <LanternLoader />
       </div>
     );
   }

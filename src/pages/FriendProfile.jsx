@@ -3,6 +3,7 @@ import { useParams, Outlet } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useViewedProfile } from '../context/ViewedProfileContext.jsx';
 import { getResumeSignedUrl } from '../utils/resume.js';
+import LanternLoader from '../components/LanternLoader.jsx';
 
 // Layout for every /friends/:friendId* route (overview, board, friends,
 // duels - see App.jsx). Profiles are fully public now, so this loads once
@@ -58,7 +59,7 @@ export default function FriendProfile() {
     };
   }, [friendId, setViewed]);
 
-  if (state.loading) return <p className="text-ink2">Loading profile…</p>;
+  if (state.loading) return <LanternLoader label="Loading profile" />;
   if (state.error) return <p className="text-bad">{state.error}</p>;
 
   // The back link itself lives on each tab, not here - "← Back to friends"

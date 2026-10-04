@@ -8,6 +8,7 @@ import { analyzePassword, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../ut
 import { uploadAvatar } from '../utils/avatar.js';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter.jsx';
 import DefaultAvatar from '../components/DefaultAvatar.jsx';
+import LanternLoader from '../components/LanternLoader.jsx';
 
 const SECTIONS = [
   { key: 'profile', label: 'Profile' },
@@ -89,7 +90,7 @@ function ProfileSection() {
     });
   }
 
-  if (loading) return <p className="text-sm text-ink2">Loading…</p>;
+  if (loading) return <LanternLoader />;
 
   if (loadError || !profile) {
     return (
@@ -103,7 +104,7 @@ function ProfileSection() {
     );
   }
 
-  if (!form) return <p className="text-sm text-ink2">Loading…</p>;
+  if (!form) return <LanternLoader />;
 
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0];

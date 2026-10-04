@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useNotificationsContext } from '../context/NotificationsContext.jsx';
 import Avatar from '../components/Avatar.jsx';
+import LanternLoader from '../components/LanternLoader.jsx';
 
 // Human-readable line + where clicking it should go, purely a function of
 // the notification's type and its small `data` payload - keeps every row's
@@ -76,7 +77,7 @@ export default function Notifications() {
       {error && <p className="text-sm text-bad">{error}</p>}
 
       {loading ? (
-        <p className="text-sm text-ink2">Loading…</p>
+        <LanternLoader />
       ) : notifications.length === 0 ? (
         <p className="text-sm text-ink2">Nothing yet - this is where friend requests, duel updates, and friend activity will show up.</p>
       ) : (

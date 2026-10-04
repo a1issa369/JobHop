@@ -6,6 +6,7 @@ import ApplicationModal from '../components/ApplicationModal.jsx';
 import ConversionChart from '../components/ConversionChart.jsx';
 import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
 import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
+import LanternLoader from '../components/LanternLoader.jsx';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -147,7 +148,7 @@ export default function Dashboard() {
       )}
 
       {loading ? (
-        <p className="text-ink2">Loading board…</p>
+        <LanternLoader label="Loading board" />
       ) : (
         <>
           <KanbanBoard

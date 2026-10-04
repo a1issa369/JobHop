@@ -3,6 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useSocialGraph } from '../context/SocialGraphContext.jsx';
 import DuelVersus from '../components/DuelVersus.jsx';
+import LanternLoader from '../components/LanternLoader.jsx';
 
 const PARTICIPANT_FIELDS = 'id, username, full_name, avatar_url';
 
@@ -78,7 +79,7 @@ export default function ViewedDuels() {
         <Link to={`/friends/${profile.id}`} className="text-sm text-ink2 hover:text-signal">
           ← Back to profile
         </Link>
-        <p className="text-sm text-ink2">Loading…</p>
+        <LanternLoader />
       </div>
     );
   }

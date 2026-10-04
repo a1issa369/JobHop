@@ -5,6 +5,7 @@ import CalendarHeatmap from '../components/CalendarHeatmap.jsx';
 import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
 import MonthlyStats from '../components/MonthlyStats.jsx';
 import { localDateKey, startOfLocalYearISO } from '../utils/date.js';
+import LanternLoader from '../components/LanternLoader.jsx';
 
 // Reached by clicking the avatar in the navbar - deliberately a separate
 // page from the job-tracker board (Dashboard.jsx), not a tab bolted onto
@@ -39,7 +40,7 @@ export default function Profile() {
   }, [user.id]);
 
   if (loading) {
-    return <p className="text-sm text-ink2">Loading…</p>;
+    return <LanternLoader />;
   }
 
   const applicationsByDate = {};

@@ -159,16 +159,34 @@ export default function Navbar() {
     <header className="relative z-20 border-b border-grid bg-panel/80 backdrop-blur">
       <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-6">
         <div className="flex items-center gap-3">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <circle cx="4" cy="20" r="2" fill="#F2A63A" />
+          {/* A running figure (mid-stride, briefcase in hand) inside an
+              open motion arc - "hopping" toward the next job, in the app's
+              own palette rather than a literal copy of any one logo-maker
+              export. */}
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
             <path
-              d="M4 20 C 8 14, 10 10, 20 4"
+              d="M6 24a10 10 0 1 1 14-14"
               stroke="#9385D1"
-              strokeWidth="2"
-              strokeDasharray="1 5"
+              strokeWidth="2.5"
               strokeLinecap="round"
             />
-            <circle cx="20" cy="4" r="2" fill="#4CAF7D" />
+            <circle cx="17" cy="9" r="3" fill="#F1ECFA" />
+            <path
+              d="M14 13l5 2 4-5"
+              stroke="#F1ECFA"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M19 15l-3 4-5 2"
+              stroke="#F1ECFA"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <rect x="21" y="9" width="6" height="5" rx="1" fill="#F2A63A" />
+            <path d="M23 9v-1a1 1 0 0 1 1-1 1 1 0 0 1 1 1v1" stroke="#F2A63A" strokeWidth="1.2" />
           </svg>
           <span className="font-display text-xl font-semibold tracking-tight">JobHop</span>
           {viewingSomeoneElse && viewed?.profile && (
