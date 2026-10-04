@@ -162,7 +162,7 @@ export default function Navbar() {
           {/* Final logo artwork (exported PNG, in public/logo.png) - a
               figure leaping up a set of ascending bars, replacing the
               earlier hand-coded SVG drafts. */}
-          <img src="/logo.png" alt="JobHop" className="h-[30px] w-[30px] rounded-md" />
+          <img src="/logo.png" alt="JobHop" className="h-11 w-11 rounded-lg" />
           <span className="font-display text-xl font-semibold tracking-tight">JobHop</span>
           {viewingSomeoneElse && viewed?.profile && (
             <span className="ml-1 rounded-full bg-grid/50 px-2.5 py-1 text-[11px] font-medium text-ink2">
