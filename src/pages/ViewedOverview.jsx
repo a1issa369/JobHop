@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import CalendarHeatmap from '../components/CalendarHeatmap.jsx';
 import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
 import MonthlyStats from '../components/MonthlyStats.jsx';
+import { localDateKey, startOfLocalYearISO } from '../utils/date.js';
 
 // The index route for /friends/:friendId - what you land on after clicking
 // a name anywhere in the app (search, a friend card, a duel). Same stats +
@@ -28,7 +29,7 @@ export default function ViewedOverview() {
           .from('applications')
           .select('id, created_at, stage')
           .eq('user_id', profile.id)
-          .gte('created_at', `${new Date().getFullYear()}-01-01`),
+          .gte('created_at', startOfLocalYearISO(new Date().getFullYear())),
         supabase
           .from('stage_history')
           .select('application_id, from_stage, to_stage, changed_at')
@@ -73,7 +74,7 @@ export default function ViewedOverview() {
 
   const applicationsByDate = {};
   for (const a of applications) {
-    const day = a.created_at.slice(0, 10);
+    const day = localDateKey(a.created_at);
     applicationsByDate[day] = (applicationsByDate[day] ?? 0) + 1;
   }
 

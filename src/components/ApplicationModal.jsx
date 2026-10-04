@@ -5,14 +5,21 @@ import { STAGES, WORK_TYPES } from '../utils/stageConfig';
 // Only company, role, and stage are required to create a card. Everything
 // else (deadline, notes, location, work type) is optional detail added
 // later.
+// `.optional()` only lets a field be `undefined` - it still rejects `null`,
+// which is exactly what location/work_type/deadline/notes come back as from
+// the database when they've never been filled in. `.nullable()` is what
+// closes that gap; without it, opening an existing card whose, say,
+// work_type was never set and saving ANY change (even just editing notes)
+// failed the whole form with a generic "Invalid input" - the real field at
+// fault wasn't even the one the user touched.
 const schema = z.object({
   company: z.string().min(1, 'Company is required').max(100),
   role: z.string().min(1, 'Role is required').max(100),
   stage: z.string().min(1),
-  location: z.string().max(100).optional().or(z.literal('')),
-  work_type: z.enum(['remote', 'hybrid', 'onsite']).optional().or(z.literal('')),
-  deadline: z.string().optional().or(z.literal('')),
-  notes: z.string().max(2000).optional().or(z.literal(''))
+  location: z.string().max(100).nullable().optional().or(z.literal('')),
+  work_type: z.enum(['remote', 'hybrid', 'onsite']).nullable().optional().or(z.literal('')),
+  deadline: z.string().nullable().optional().or(z.literal('')),
+  notes: z.string().max(2000).nullable().optional().or(z.literal(''))
 });
 
 const REQUIRED_FIELDS = ['company', 'role', 'stage'];

@@ -67,7 +67,7 @@ function ViewedProfileCard({ viewed }) {
   if (viewed.loading) {
     return (
       <aside className={ASIDE_CLASS}>
-        <div className="sticky top-20 card-surface p-5 text-sm text-ink2">Loading profile…</div>
+        <div className="sticky top-28 card-surface p-5 text-sm text-ink2">Loading profile…</div>
       </aside>
     );
   }
@@ -75,7 +75,7 @@ function ViewedProfileCard({ viewed }) {
   if (viewed.error || !viewed.profile) {
     return (
       <aside className={ASIDE_CLASS}>
-        <div className="sticky top-20 card-surface p-5 text-sm">
+        <div className="sticky top-28 card-surface p-5 text-sm">
           <p className="text-bad">Couldn't load this profile.</p>
           {viewed.error && <p className="mt-1 text-xs text-ink2">{viewed.error}</p>}
         </div>
@@ -93,17 +93,17 @@ function ViewedProfileCard({ viewed }) {
 
   return (
     <aside className={ASIDE_CLASS}>
-      <div className="sticky top-20 space-y-4">
+      <div className="sticky top-28 space-y-4">
         <div className="card-surface p-5 text-center">
           {profile.avatar_url ? (
             <img
               src={profile.avatar_url}
               alt=""
-              className="mx-auto h-16 w-16 rounded-full object-cover"
+              className="mx-auto h-24 w-24 rounded-full object-cover"
             />
           ) : (
-            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-panel">
-              <DefaultAvatar className="h-10 w-10" />
+            <span className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-panel">
+              <DefaultAvatar className="h-14 w-14" />
             </span>
           )}
 
@@ -213,7 +213,7 @@ function OwnProfileCard() {
   if (loading) {
     return (
       <aside className={ASIDE_CLASS}>
-        <div className="sticky top-20 card-surface p-5 text-sm text-ink2">Loading profile…</div>
+        <div className="sticky top-28 card-surface p-5 text-sm text-ink2">Loading profile…</div>
       </aside>
     );
   }
@@ -221,7 +221,7 @@ function OwnProfileCard() {
   if (error || !profile) {
     return (
       <aside className={ASIDE_CLASS}>
-        <div className="sticky top-20 card-surface p-5 text-sm">
+        <div className="sticky top-28 card-surface p-5 text-sm">
           <p className="text-bad">Couldn't load your profile.</p>
           <p className="mt-1 text-xs text-ink2">{error?.message ?? 'Unknown error.'}</p>
           <button onClick={refresh} className="btn-secondary mt-3 w-full text-xs">
@@ -256,17 +256,17 @@ function OwnProfileCard() {
 
   return (
     <aside className={ASIDE_CLASS}>
-      <div className="sticky top-20 space-y-4">
+      <div className="sticky top-28 space-y-4">
         <div className="card-surface p-5 text-center">
           {profile.avatar_url ? (
             <img
               src={profile.avatar_url}
               alt=""
-              className="mx-auto h-16 w-16 rounded-full object-cover"
+              className="mx-auto h-24 w-24 rounded-full object-cover"
             />
           ) : (
-            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-panel">
-              <DefaultAvatar className="h-10 w-10" />
+            <span className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-panel">
+              <DefaultAvatar className="h-14 w-14" />
             </span>
           )}
 
@@ -308,7 +308,7 @@ function OwnProfileCard() {
 
         <div className="card-surface p-5">
           <h3 className="font-display text-sm font-semibold">Resume</h3>
-          <p className="mt-1 text-xs text-ink2">PDF only, up to 8MB.</p>
+          <p className="mt-1 text-xs text-ink2">PDF only, up to 2MB.</p>
 
           {profile.resume_url && (
             <button

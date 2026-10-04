@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 
-export const MAX_RESUME_BYTES = 8 * 1024 * 1024; // 8MB
+export const MAX_RESUME_BYTES = 2 * 1024 * 1024; // 2MB - a resume should fit on a page or two
 
 // Fixed filename per user so re-uploading always replaces (upsert) rather
 // than accumulating files - the owner only ever has one resume on file.
@@ -18,7 +18,7 @@ export async function uploadResume(userId, file) {
     return { error: { message: 'Only PDF files are allowed.' } };
   }
   if (file.size > MAX_RESUME_BYTES) {
-    return { error: { message: 'Resume must be under 8MB.' } };
+    return { error: { message: 'Resume must be under 2MB.' } };
   }
 
   const path = resumeStoragePath(userId);

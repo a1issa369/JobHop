@@ -7,7 +7,7 @@ import { useNotificationsContext } from '../context/NotificationsContext.jsx';
 import DefaultAvatar from './DefaultAvatar.jsx';
 
 const linkClass = ({ isActive }) =>
-  `px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+  `px-3.5 py-2 rounded text-base font-medium transition-colors ${
     isActive ? 'bg-signal text-ink' : 'text-ink2 hover:text-paper'
   }`;
 
@@ -74,11 +74,11 @@ function AvatarMenu() {
   }
 
   return (
-    <div ref={boxRef} className="relative ml-2">
+    <div ref={boxRef} className="relative ml-3">
       <button
         onClick={() => setOpen((o) => !o)}
         title="Account menu"
-        className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full ring-2 ring-transparent transition-all duration-150 hover:scale-110 hover:ring-route"
+        className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full ring-2 ring-transparent transition-all duration-150 hover:scale-110 hover:ring-route"
       >
         {/* overflow-hidden lives on this inner circle, not the button itself,
             so the unread dot below (a sibling, on the button) sits cleanly on
@@ -90,16 +90,16 @@ function AvatarMenu() {
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
           ) : (
-            <DefaultAvatar className="h-7 w-7" />
+            <DefaultAvatar className="h-10 w-10" />
           )}
         </span>
         {unreadCount > 0 && (
-          <span className="absolute right-0 top-0 h-3 w-3 rounded-full bg-bad ring-2 ring-ink" />
+          <span className="absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-bad ring-2 ring-ink" />
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 z-10 mt-2 w-52 overflow-hidden rounded-lg border border-grid bg-panel shadow-lg">
+        <div className="absolute right-0 z-10 mt-3 w-56 overflow-hidden rounded-lg border border-grid bg-panel shadow-lg">
           <button
             onClick={() => go('/profile')}
             className="block w-full px-4 py-2.5 text-left text-sm text-ink2 hover:bg-grid/40 hover:text-paper"
@@ -157,9 +157,9 @@ export default function Navbar() {
     // That's what caused a Board stage count to visibly show through the
     // open dropdown menu.
     <header className="relative z-20 border-b border-grid bg-panel/80 backdrop-blur">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-6">
+        <div className="flex items-center gap-3">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
             <circle cx="4" cy="20" r="2" fill="#F2A63A" />
             <path
               d="M4 20 C 8 14, 10 10, 20 4"
@@ -170,14 +170,14 @@ export default function Navbar() {
             />
             <circle cx="20" cy="4" r="2" fill="#4CAF7D" />
           </svg>
-          <span className="font-display text-lg font-semibold tracking-tight">JobHop</span>
+          <span className="font-display text-xl font-semibold tracking-tight">JobHop</span>
           {viewingSomeoneElse && viewed?.profile && (
             <span className="ml-1 rounded-full bg-grid/50 px-2.5 py-1 text-[11px] font-medium text-ink2">
               Viewing {viewed.profile.full_name || viewed.profile.username}
             </span>
           )}
         </div>
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-3">
           {viewingSomeoneElse ? (
             <ViewedNavLinks friendId={friendMatch.params.friendId} />
           ) : (
