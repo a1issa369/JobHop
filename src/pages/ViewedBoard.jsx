@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { format, isPast, parseISO } from 'date-fns';
 import { supabase } from '../lib/supabaseClient';
 import { STAGES, STAGE_MAP, WORK_TYPE_MAP } from '../utils/stageConfig';
-import LanternLoader from '../components/LanternLoader.jsx';
+import StairsLoader from '../components/StairsLoader.jsx';
 
 const PAGE_SIZE = 12;
 
@@ -151,7 +151,7 @@ export default function ViewedBoard() {
     return (
       <div>
         {backLink}
-        <LanternLoader label="Loading board" />
+        <StairsLoader label="Loading board" />
       </div>
     );
   }

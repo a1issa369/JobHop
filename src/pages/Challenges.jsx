@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useProfileContext } from '../context/ProfileContext.jsx';
 import { useChallenges } from '../hooks/useChallenges.js';
 import DuelVersus from '../components/DuelVersus.jsx';
-import LanternLoader from '../components/LanternLoader.jsx';
+import StairsLoader from '../components/StairsLoader.jsx';
 
 function otherParty(challenge, userId) {
   return challenge.challenger_id === userId ? challenge.opponent : challenge.challenger;
@@ -54,7 +54,7 @@ export default function Challenges() {
   const { profile: myProfile } = useProfileContext();
   const { incoming, outgoing, active, history, loading, error, respond, cancel } = useChallenges();
 
-  if (loading) return <LanternLoader />;
+  if (loading) return <StairsLoader />;
 
   return (
     <div className="space-y-8">

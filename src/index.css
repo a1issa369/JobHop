@@ -79,25 +79,29 @@ input:-webkit-autofill:active {
   animation: stage-drop-pop 0.5s ease-out;
 }
 
-/* Lantern loading indicator (see LanternLoader.jsx) - the flame glows up
-   then dims back down on a loop, like a lantern being turned on and off,
-   while a page's first fetch is in flight. Barely visible on localhost
-   (that fetch is instant), but gives real deployed load times something
-   better to look at than a blank beat of silence. */
-@keyframes lantern-glow {
+/* Stairs loading indicator (see StairsLoader.jsx) - four bars rise into
+   view left to right, hold, then fade back down together before the next
+   bar starts the sequence again, while a page's first fetch is in flight.
+   Barely visible on localhost (that fetch is instant), but gives real
+   deployed load times something better to look at than a blank beat of
+   silence. Each bar's animationDelay (set inline in StairsLoader.jsx) is
+   what staggers them into the left-to-right climb. */
+@keyframes stair-step {
   0%,
   100% {
-    opacity: 1;
-    filter: drop-shadow(0 0 7px rgba(242, 166, 58, 0.85));
+    opacity: 0.25;
+    transform: scaleY(0.4);
   }
-  50% {
-    opacity: 0.2;
-    filter: drop-shadow(0 0 0 rgba(242, 166, 58, 0));
+  40%,
+  70% {
+    opacity: 1;
+    transform: scaleY(1);
   }
 }
-.lantern-flame {
-  animation: lantern-glow 1.6s ease-in-out infinite;
-  transform-origin: center;
+.stair-step {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: stair-step 1.4s ease-in-out infinite;
 }
 
 /* dotted "route" connector drawn between kanban columns */

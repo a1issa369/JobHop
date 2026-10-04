@@ -8,7 +8,7 @@ import { analyzePassword, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../ut
 import { uploadAvatar } from '../utils/avatar.js';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter.jsx';
 import DefaultAvatar from '../components/DefaultAvatar.jsx';
-import LanternLoader from '../components/LanternLoader.jsx';
+import StairsLoader from '../components/StairsLoader.jsx';
 
 const SECTIONS = [
   { key: 'profile', label: 'Profile' },
@@ -90,7 +90,7 @@ function ProfileSection() {
     });
   }
 
-  if (loading) return <LanternLoader />;
+  if (loading) return <StairsLoader />;
 
   if (loadError || !profile) {
     return (
@@ -104,7 +104,7 @@ function ProfileSection() {
     );
   }
 
-  if (!form) return <LanternLoader />;
+  if (!form) return <StairsLoader />;
 
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0];
