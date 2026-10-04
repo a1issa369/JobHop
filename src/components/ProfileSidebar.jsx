@@ -37,7 +37,7 @@ function FollowCounts({ friendsHref, followers, following }) {
     <div className="mt-3 flex justify-center gap-4 border-y border-grid py-2.5 text-sm">
       <Link to={`${friendsHref}?tab=followers`} className="hover:underline">
         <span className="font-semibold text-paper">{followers}</span>{' '}
-        <span className="text-ink2">follower{followers === 1 ? '' : 's'}</span>
+        <span className="text-ink2">followers{followers === 1 ? '' : 's'}</span>
       </Link>
       <Link to={`${friendsHref}?tab=following`} className="hover:underline">
         <span className="font-semibold text-paper">{following}</span>{' '}
@@ -99,10 +99,10 @@ function ViewedProfileCard({ viewed }) {
             <img
               src={profile.avatar_url}
               alt=""
-              className="mx-auto h-40 w-40 rounded-full object-cover"
+              className="mx-auto h-41 w-41 rounded-full object-cover"
             />
           ) : (
-            <span className="mx-auto flex h-40 w-40 items-center justify-center rounded-full bg-panel">
+            <span className="mx-auto flex h-41 w-41 items-center justify-center rounded-full bg-panel">
               <DefaultAvatar className="h-20 w-20" />
             </span>
           )}
@@ -262,10 +262,10 @@ function OwnProfileCard() {
             <img
               src={profile.avatar_url}
               alt=""
-              className="mx-auto h-40 w-40 rounded-full object-cover"
+              className="mx-auto h-41 w-41 rounded-full object-cover"
             />
           ) : (
-            <span className="mx-auto flex h-40 w-40 items-center justify-center rounded-full bg-panel">
+            <span className="mx-auto flex h-41 w-41 items-center justify-center rounded-full bg-panel">
               <DefaultAvatar className="h-20 w-20" />
             </span>
           )}
