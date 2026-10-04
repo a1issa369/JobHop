@@ -99,10 +99,10 @@ function ViewedProfileCard({ viewed }) {
             <img
               src={profile.avatar_url}
               alt=""
-              className="mx-auto h-41 w-41 rounded-full object-cover"
+              className="mx-auto h-40 w-40 rounded-full object-cover"
             />
           ) : (
-            <span className="mx-auto flex h-41 w-41 items-center justify-center rounded-full bg-panel">
+            <span className="mx-auto flex h-40 w-40 items-center justify-center rounded-full bg-panel">
               <DefaultAvatar className="h-20 w-20" />
             </span>
           )}
@@ -262,10 +262,10 @@ function OwnProfileCard() {
             <img
               src={profile.avatar_url}
               alt=""
-              className="mx-auto h-41 w-41 rounded-full object-cover"
+              className="mx-auto h-40 w-40 rounded-full object-cover"
             />
           ) : (
-            <span className="mx-auto flex h-41 w-41 items-center justify-center rounded-full bg-panel">
+            <span className="mx-auto flex h-40 w-40 items-center justify-center rounded-full bg-panel">
               <DefaultAvatar className="h-20 w-20" />
             </span>
           )}
