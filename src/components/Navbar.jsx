@@ -78,17 +78,23 @@ function AvatarMenu() {
       <button
         onClick={() => setOpen((o) => !o)}
         title="Account menu"
-        className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel ring-2 ring-transparent transition-all duration-150 hover:scale-110 hover:ring-route"
+        className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full ring-2 ring-transparent transition-all duration-150 hover:scale-110 hover:ring-route"
       >
-        {profile?.avatar_url ? (
-          <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <DefaultAvatar className="h-7 w-7" />
-        )}
+        {/* overflow-hidden lives on this inner circle, not the button itself,
+            so the unread dot below (a sibling, on the button) sits cleanly on
+            the ring's edge instead of getting clipped into the photo by the
+            same mask that keeps the avatar round. The count itself only
+            shows up once you open the dropdown - this is just a "something's
+            new" signal, not a second place to read the number. */}
+        <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-panel">
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <DefaultAvatar className="h-7 w-7" />
+          )}
+        </span>
         {unreadCount > 0 && (
-          <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-bad px-1 text-[9px] font-bold text-white">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
+          <span className="absolute right-0 top-0 h-3 w-3 rounded-full bg-bad ring-2 ring-ink" />
         )}
       </button>
 
