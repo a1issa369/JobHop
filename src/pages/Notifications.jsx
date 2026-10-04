@@ -8,6 +8,11 @@ import Avatar from '../components/Avatar.jsx';
 function describe(n) {
   const name = n.actor?.full_name || n.actor?.username || 'Someone';
   switch (n.type) {
+    case 'new_follower':
+      return {
+        text: `@${n.actor?.username || 'someone'} started following you.`,
+        to: `/friends/${n.actor_id}`
+      };
     case 'friend_request':
       return { text: `${name} sent you a friend request.`, to: '/friends' };
     case 'friend_accepted':
@@ -59,7 +64,7 @@ export default function Notifications() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold">Notifications</h1>
-          <p className="text-sm text-ink2">Friend requests, duel activity, and what your friends are applying to.</p>
+          <p className="text-sm text-ink2">New followers, friend requests, duel activity, and what your friends are applying to.</p>
         </div>
         {unreadCount > 0 && (
           <button onClick={markAllRead} className="btn-secondary text-xs">

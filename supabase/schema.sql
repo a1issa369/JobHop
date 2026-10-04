@@ -812,7 +812,7 @@ create table if not exists notifications (
   type text not null check (type in (
     'friend_request', 'friend_accepted',
     'duel_invite', 'duel_accepted', 'duel_declined', 'duel_completed',
-    'friend_application'
+    'friend_application', 'new_follower'
   )),
   actor_id uuid references profiles(id) on delete set null, -- who caused it
   data jsonb not null default '{}'::jsonb,
@@ -1041,3 +1041,25 @@ drop trigger if exists trg_handle_unfollow on follows;
 create trigger trg_handle_unfollow
   after delete on follows
   for each row execute procedure handle_unfollow();
+
+-- ---------- new follower ----------
+-- A plain "X started following you" notification - deliberately separate
+-- from the friend-request flow, since a follow is already one-directional
+-- and needs no accept/decline (see migration 013).
+create or replace function notify_new_follower()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into notifications (user_id, type, actor_id, data)
+  values (new.followee_id, 'new_follower', new.follower_id, '{}'::jsonb);
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notify_new_follower on follows;
+create trigger trg_notify_new_follower
+  after insert on follows
+  for each row execute procedure notify_new_follower();
