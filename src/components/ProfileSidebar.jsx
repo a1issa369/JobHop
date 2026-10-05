@@ -28,7 +28,10 @@ function FollowCounts({ friendsHref, followers, following }) {
   );
 }
 
-const ASIDE_CLASS = 'hidden w-96 flex-shrink-0 lg:block';
+// Stacks full-width above the page content on mobile/narrow windows (where
+// it used to just vanish - `hidden ... lg:block` dropped it entirely below
+// the lg breakpoint), then becomes a fixed-width sticky sidebar at lg+.
+const ASIDE_CLASS = 'w-full lg:w-96 lg:flex-shrink-0';
 
 // Stays mounted alongside the routed page content (see App.jsx) rather than
 // living inside any one page, so it's present - and keeps its own state -
@@ -48,7 +51,7 @@ function ViewedProfileCard({ viewed }) {
   if (viewed.loading) {
     return (
       <aside className={ASIDE_CLASS}>
-        <div className="sticky top-28 card-surface p-5 text-sm text-ink2">Loading profile…</div>
+        <div className="lg:sticky lg:top-28 card-surface p-5 text-sm text-ink2">Loading profile…</div>
       </aside>
     );
   }
@@ -56,7 +59,7 @@ function ViewedProfileCard({ viewed }) {
   if (viewed.error || !viewed.profile) {
     return (
       <aside className={ASIDE_CLASS}>
-        <div className="sticky top-28 card-surface p-5 text-sm">
+        <div className="lg:sticky lg:top-28 card-surface p-5 text-sm">
           <p className="text-bad">Couldn't load this profile.</p>
           {viewed.error && <p className="mt-1 text-xs text-ink2">{viewed.error}</p>}
         </div>
@@ -73,7 +76,7 @@ function ViewedProfileCard({ viewed }) {
 
   return (
     <aside className={ASIDE_CLASS}>
-      <div className="sticky top-28 space-y-4">
+      <div className="lg:sticky lg:top-28 space-y-4">
         <div className="card-surface p-5 text-center">
           {profile.avatar_url ? (
             <img
@@ -168,7 +171,7 @@ function OwnProfileCard() {
   if (loading) {
     return (
       <aside className={ASIDE_CLASS}>
-        <div className="sticky top-28 card-surface p-5 text-sm text-ink2">Loading profile…</div>
+        <div className="lg:sticky lg:top-28 card-surface p-5 text-sm text-ink2">Loading profile…</div>
       </aside>
     );
   }
@@ -176,7 +179,7 @@ function OwnProfileCard() {
   if (error || !profile) {
     return (
       <aside className={ASIDE_CLASS}>
-        <div className="sticky top-28 card-surface p-5 text-sm">
+        <div className="lg:sticky lg:top-28 card-surface p-5 text-sm">
           <p className="text-bad">Couldn't load your profile.</p>
           <p className="mt-1 text-xs text-ink2">{error?.message ?? 'Unknown error.'}</p>
           <button onClick={refresh} className="btn-secondary mt-3 w-full text-xs">
@@ -214,7 +217,7 @@ function OwnProfileCard() {
 
   return (
     <aside className={ASIDE_CLASS}>
-      <div className="sticky top-28 space-y-4">
+      <div className="lg:sticky lg:top-28 space-y-4">
         <div className="card-surface p-5 text-center">
           {profile.avatar_url ? (
             <img

@@ -7,6 +7,7 @@ import { NotificationsProvider } from './context/NotificationsContext.jsx';
 import { SocialGraphProvider } from './context/SocialGraphContext.jsx';
 import Navbar from './components/Navbar.jsx';
 import ProfileSidebar from './components/ProfileSidebar.jsx';
+import Footer from './components/Footer.jsx';
 
 // Route-level code splitting: each page only downloads once someone
 // actually navigates there, instead of every page (plus chart.js, pulled in
@@ -151,25 +152,27 @@ export default function App() {
 
   if (!showChrome) {
     return (
-      <div className="min-h-screen">
-        <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
+      <div className="flex min-h-screen flex-col">
+        <main className="mx-auto flex w-full max-w-[1600px] flex-1 gap-6 px-6 py-6">
           <div className="min-w-0 flex-1">{suspendedRoutes}</div>
         </main>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <SocialGraphProvider>
         <ViewedProfileProvider>
           <ProfileProvider userId={user.id}>
             <NotificationsProvider>
               <Navbar />
-              <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
+              <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
                 <ProfileSidebar />
                 <div className="min-w-0 flex-1">{suspendedRoutes}</div>
               </main>
+              <Footer />
             </NotificationsProvider>
           </ProfileProvider>
         </ViewedProfileProvider>
