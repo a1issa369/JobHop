@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 // Deliberately tiny and out of the way - this exists so the independent-
 // project/no-affiliation disclaimer (see Terms.jsx) has a presence on every
 // page, not just for someone who happens to click into Terms, without
 // competing for attention with the actual app above it.
 export default function Footer() {
+  const location = useLocation();
   return (
     <footer className="mx-auto max-w-[1600px] px-6 pb-6 pt-2 text-center text-[11px] text-ink2/70">
       <p>
@@ -16,6 +17,14 @@ export default function Footer() {
         ·{' '}
         <Link to="/privacy" className="hover:text-ink2 hover:underline">
           Privacy
+        </Link>{' '}
+        ·{' '}
+        <Link
+          to="/feedback"
+          state={{ from: location.pathname }}
+          className="hover:text-ink2 hover:underline"
+        >
+          Feedback
         </Link>
       </p>
     </footer>

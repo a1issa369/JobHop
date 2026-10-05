@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, useMatch, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useIsAdmin } from '../hooks/useIsAdmin.js';
 import { useProfileContext } from '../context/ProfileContext.jsx';
 import { useViewedProfile } from '../context/ViewedProfileContext.jsx';
 import { useNotificationsContext } from '../context/NotificationsContext.jsx';
@@ -57,6 +58,8 @@ function AvatarMenu() {
   const { unreadCount } = useNotificationsContext();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAdmin } = useIsAdmin();
   const [open, setOpen] = useState(false);
   const boxRef = useRef(null);
 
@@ -68,9 +71,9 @@ function AvatarMenu() {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  function go(path) {
+  function go(path, state) {
     setOpen(false);
-    navigate(path);
+    navigate(path, state ? { state } : undefined);
   }
 
   return (
@@ -123,6 +126,20 @@ function AvatarMenu() {
           >
             Profile settings
           </button>
+          <button
+            onClick={() => go('/feedback', { from: location.pathname })}
+            className="block w-full px-4 py-2.5 text-left text-sm text-ink2 hover:bg-grid/40 hover:text-paper"
+          >
+            Send feedback
+          </button>
+          {isAdmin && (
+            <button
+              onClick={() => go('/admin')}
+              className="block w-full px-4 py-2.5 text-left text-sm text-ink2 hover:bg-grid/40 hover:text-paper"
+            >
+              Site stats
+            </button>
+          )}
           <button
             onClick={signOut}
             className="block w-full border-t border-grid px-4 py-2.5 text-left text-sm text-ink2 hover:bg-bad/10 hover:text-bad"

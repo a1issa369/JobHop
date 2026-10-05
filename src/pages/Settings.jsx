@@ -50,6 +50,13 @@ export default function Settings() {
           >
             Privacy Policy
           </Link>
+          <Link
+            to="/feedback"
+            state={{ from: '/settings' }}
+            className="block rounded px-3 py-1.5 text-xs text-ink2 hover:text-paper"
+          >
+            Send feedback
+          </Link>
         </div>
       </nav>
 

@@ -31,6 +31,8 @@ const Notifications = lazy(() => import('./pages/Notifications.jsx'));
 const NotFound = lazy(() => import('./pages/NotFound.jsx'));
 const Privacy = lazy(() => import('./pages/Privacy.jsx'));
 const Terms = lazy(() => import('./pages/Terms.jsx'));
+const Feedback = lazy(() => import('./pages/Feedback.jsx'));
+const Admin = lazy(() => import('./pages/Admin.jsx'));
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -75,6 +77,20 @@ export default function App() {
           to re-check them later. */}
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
+      {/* Not gated either: the page itself explains that sending feedback
+          needs an account and offers the support email instead, which is
+          more useful to a signed-out visitor than a redirect to /login. */}
+      <Route path="/feedback" element={<Feedback />} />
+      {/* Owner-only. The page renders the 404 for anyone else, and the data
+          behind it is locked in the database regardless. */}
+      <Route
+        path="/admin"
+        element={
+          <Protected>
+            <Admin />
+          </Protected>
+        }
+      />
       <Route
         path="/"
         element={

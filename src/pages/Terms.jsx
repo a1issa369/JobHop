@@ -1,13 +1,10 @@
 // Same approach as Privacy.jsx: plain-English, accurate to what this app
-// actually does, clearly NOT legal advice. Update the date and contact
-// email before going live.
-const LAST_UPDATED = 'October 4, 2026';
-// One address for everything (support, bugs, legal questions) rather than
-// splitting across several inboxes for a solo project. A free Outlook
-// account rather than something @jobhop.me, since mailbox hosting on the
-// domain isn't set up - perfectly normal for a solo/student project.
-// Privacy.jsx uses the same constant name/value, so update both if it changes.
-const SUPPORT_EMAIL = 'JobHop.me@outlook.com';
+// actually does, clearly NOT legal advice. Update the date when the terms
+// change. The support address lives in src/utils/site.js (one address for
+// support, bugs, and legal questions, shared with Privacy and the feedback page).
+import { SUPPORT_EMAIL } from '../utils/site.js';
+
+const LAST_UPDATED = 'October 5, 2026';
 
 function Section({ title, children }) {
   return (
@@ -64,6 +61,7 @@ export default function Terms() {
             <li>Try to access another user's data, account, or private application board.</li>
             <li>Disrupt the service (scraping at scale, automated abuse, attempting to bypass rate limits).</li>
             <li>Use the social features to harass another user.</li>
+            <li>Spam the feedback form or use it to send abusive or unrelated messages.</li>
           </ul>
           <p>
             Violating these may result in your account being suspended or removed.
@@ -77,6 +75,14 @@ export default function Terms() {
             parts that are social by design (your profile, your public application activity used
             in duels/notifications), to show it to the friends you connect with - strictly to
             operate the app, not to use it for anything else.
+          </p>
+        </Section>
+
+        <Section title="Feedback you send">
+          <p>
+            If you send feedback or a bug report, you're allowing it to be used to fix and improve
+            JobHop, with no obligation to act on it or to reply. Please don't put passwords or
+            other sensitive details in it. See the Privacy Policy for how it's stored.
           </p>
         </Section>
 

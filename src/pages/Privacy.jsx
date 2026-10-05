@@ -2,12 +2,12 @@
 // this app actually stores and sends (see supabase/schema.sql and
 // src/lib/errorReporting.js) rather than a generic boilerplate template -
 // but it is NOT legal advice, and the disclaimer below says so up front.
-// Update the two dates and the contact email before this goes live, and
-// update the body itself if what the app collects changes.
-const LAST_UPDATED = 'October 4, 2026';
-// A free Outlook account, kept the same as Terms.jsx's SUPPORT_EMAIL so
-// there's only one address to set up and check.
-const CONTACT_EMAIL = 'JobHop.me@outlook.com';
+// Update the date below and the body itself whenever what the app collects
+// changes. The contact address lives in src/utils/site.js, shared with
+// Terms.jsx and the feedback page.
+import { SUPPORT_EMAIL as CONTACT_EMAIL } from '../utils/site.js';
+
+const LAST_UPDATED = 'October 5, 2026';
 
 function Section({ title, children }) {
   return (
@@ -64,9 +64,22 @@ export default function Privacy() {
             generate (new followers, duel results, friends' applications).
           </p>
           <p>
-            <strong className="text-paper">Basic technical info:</strong> standard things any web
-            app sees, like your browser and IP address at the time of a request (used for things
-            like rate-limiting repeated login attempts, not for tracking).
+            <strong className="text-paper">Feedback you send:</strong> if you use the feedback
+            form, the message, the category you pick, and the section of the site you were on
+            (like &ldquo;/friends&rdquo;, not a specific profile), saved with your account so it
+            can be followed up on. It's only visible to the person who runs JobHop.
+          </p>
+          <p>
+            <strong className="text-paper">Abuse-prevention records:</strong> to stop spam and
+            repeated login guessing, JobHop keeps a log of recent actions (like login attempts
+            and friend requests) with a timestamp, tied to your account, or to the email address
+            that was entered before you're signed in.
+          </p>
+          <p>
+            <strong className="text-paper">Basic technical info:</strong> our hosting providers
+            (Vercel and Supabase) see standard request details, such as your IP address and
+            browser, in their own server logs, as any website host does. JobHop doesn't store your
+            IP address itself or use it to track you.
           </p>
         </Section>
 
@@ -93,12 +106,28 @@ export default function Privacy() {
           </p>
         </Section>
 
+        <Section title="Usage totals">
+          <p>
+            The person who runs JobHop can see overall totals to keep the site healthy and to
+            describe the project (for example on a resume): how many accounts exist, how many
+            applications have been tracked, how many duels have been played, and how those numbers
+            changed week to week. These are counts only. They don't include names, emails, or the
+            contents of anyone's applications, and any figure shared publicly is a total, never
+            an individual's data.
+          </p>
+        </Section>
+
         <Section title="Who can see what">
           <p>
             Your username, display name, profile photo, school, and social links are visible to
             other JobHop users by design - that's how following and duels work. Your email,
             password, and resume are never shown to other users. Your application board is private
             unless a feature says otherwise.
+          </p>
+          <p>
+            The person who runs JobHop has administrative access to the database in order to run
+            and fix the site, and uses it for maintenance and support rather than to look through
+            people's boards.
           </p>
         </Section>
 
@@ -115,7 +144,10 @@ export default function Privacy() {
           <ul className="ml-4 list-disc space-y-1">
             <li>Edit or remove your profile info, resume, and social links.</li>
             <li>Delete all of your application cards and their history.</li>
-            <li>Delete your account entirely, which removes your data from JobHop.</li>
+            <li>
+              Delete your account entirely, which removes your data from JobHop, including any
+              feedback you've sent.
+            </li>
           </ul>
         </Section>
 

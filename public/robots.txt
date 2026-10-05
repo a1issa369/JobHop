@@ -9,8 +9,10 @@ Disallow: /friends
 Disallow: /profile
 Disallow: /challenges
 Disallow: /settings
+Disallow: /admin
+Disallow: /feedback
 Disallow: /notifications
 Disallow: /reset-password
 Disallow: /forgot-password
 
-Sitemap: https://jobhop.app/sitemap.xml
+Sitemap: https://jobhop.me/sitemap.xml
