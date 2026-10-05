@@ -44,8 +44,7 @@ rate-limiter --schedule "0 */6 * * *"`).
 ## Site stats and feedback (owner only)
 
 `/admin` ("Site stats" in the avatar menu) shows aggregate counts (users, applications,
-duels, weekly growth), auto-generated resume talking points, and an inbox for feedback
-sent from `/feedback`. It's backed by `supabase/migrations/017_admin_stats_and_feedback.sql`
+duels, weekly growth) and an inbox for feedback sent from `/feedback`. It's backed by `supabase/migrations/017_admin_stats_and_feedback.sql`
 (already included in `schema.sql` for a fresh project). On an existing project, run that
 migration once in the SQL editor, then run the commented "ONE-TIME SETUP" inserts at the
 bottom of it with your own email: one makes you the owner (`site_admins`), the other
