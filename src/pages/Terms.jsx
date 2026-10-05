@@ -2,8 +2,12 @@
 // actually does, clearly NOT legal advice. Update the date and contact
 // email before going live.
 const LAST_UPDATED = 'October 4, 2026';
-// TODO: swap in a real contact address before this goes live.
-const CONTACT_EMAIL = 'contact@jobhop.app';
+// One address for everything (support, bugs, legal questions) rather than
+// splitting across several inboxes for a solo project. A free Outlook
+// account rather than something @jobhop.me, since mailbox hosting on the
+// domain isn't set up - perfectly normal for a solo/student project.
+// Privacy.jsx uses the same constant name/value, so update both if it changes.
+const SUPPORT_EMAIL = 'JobHop.me@outlook.com';
 
 function Section({ title, children }) {
   return (
@@ -32,6 +36,15 @@ export default function Terms() {
             JobHop is a job-application tracker: a board for your own applications, plus optional
             social features (following friends, friendly duels based on application activity) and
             a resume upload. It's a personal project, not a commercial product, and is provided as-is.
+          </p>
+        </Section>
+
+        <Section title="Independent student project">
+          <p>
+            JobHop is an independent, student-built project and is not affiliated with, sponsored
+            by, or endorsed by any third-party company, employer, platform, or organization using
+            a similar name. If a valid trademark or naming concern is raised, the project may be
+            rebranded. To report bugs or support issues, contact {SUPPORT_EMAIL}.
           </p>
         </Section>
 
@@ -108,7 +121,7 @@ export default function Terms() {
         </Section>
 
         <Section title="Contact">
-          <p>Questions about these terms: {CONTACT_EMAIL}.</p>
+          <p>Questions about these terms: {SUPPORT_EMAIL}.</p>
         </Section>
       </div>
     </div>

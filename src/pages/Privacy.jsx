@@ -5,9 +5,9 @@
 // Update the two dates and the contact email before this goes live, and
 // update the body itself if what the app collects changes.
 const LAST_UPDATED = 'October 4, 2026';
-// TODO: swap in a real contact address before this goes live - a personal
-// inbox you're fine listing publicly, or a dedicated one.
-const CONTACT_EMAIL = 'contact@jobhop.app';
+// A free Outlook account, kept the same as Terms.jsx's SUPPORT_EMAIL so
+// there's only one address to set up and check.
+const CONTACT_EMAIL = 'JobHop.me@outlook.com';
 
 function Section({ title, children }) {
   return (
