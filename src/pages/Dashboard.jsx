@@ -6,6 +6,7 @@ import ApplicationModal from '../components/ApplicationModal.jsx';
 import ConversionChart from '../components/ConversionChart.jsx';
 import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
 import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
+import { useToast } from '../context/ToastContext.jsx';
 import StairsLoader from '../components/StairsLoader.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 
@@ -14,8 +15,14 @@ export default function Dashboard() {
   const [applications, setApplications] = useState([]);
   const [stageHistory, setStageHistory] = useState([]);
   const [modalState, setModalState] = useState(null); // null | 'new' | application object
+  // Reserved for a genuine page-level failure - the initial board fetch
+  // breaking - which stays visible until the user retries, unlike the
+  // single-action failures below (saving/deleting/moving one card), which
+  // now go through a toast instead since they're specific to one attempt,
+  // not the whole page.
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const showToast = useToast();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -39,7 +46,6 @@ export default function Dashboard() {
   }, [loadData]);
 
   async function handleStageChange(applicationId, newStage) {
-    setError('');
     const previous = applications;
     const app = applications.find((a) => a.id === applicationId);
     if (!app) return;
@@ -57,7 +63,7 @@ export default function Dashboard() {
     if (updateErr) {
       // ...and rolled back if the server rejects it (RLS, network, etc.)
       setApplications(previous);
-      setError('Could not move that card - it snapped back. ' + updateErr.message);
+      showToast('Could not move that card - it snapped back. ' + updateErr.message);
       return;
     }
 
@@ -71,7 +77,6 @@ export default function Dashboard() {
   }
 
   async function handleSave(values) {
-    setError('');
     const previous = applications;
     const existing = values.id ? applications.find((a) => a.id === values.id) : null;
     const stageChanged = Boolean(existing) && existing.stage !== values.stage;
@@ -117,15 +122,14 @@ export default function Dashboard() {
       loadData();
     } catch (err) {
       if (values.id) setApplications(previous);
-      setError(err instanceof RateLimitError ? err.message : err.message);
+      showToast(err instanceof RateLimitError ? err.message : err.message);
     }
   }
 
   async function handleDelete(id) {
-    setError('');
     const { error: delErr } = await supabase.from('applications').delete().eq('id', id);
     if (delErr) {
-      setError(delErr.message);
+      showToast(delErr.message);
       return;
     }
     setModalState(null);
@@ -134,14 +138,14 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold">Your route</h1>
           <p className="text-sm text-ink2">
             Click a stage to browse its cards, or drag a card onto a stage to move it.
           </p>
         </div>
-        <button onClick={() => setModalState('new')} className="btn-primary">
+        <button onClick={() => setModalState('new')} className="btn-primary self-start sm:self-auto">
           + New application
         </button>
       </div>

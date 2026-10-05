@@ -157,27 +157,32 @@ export default function Navbar() {
     // That's what caused a Board stage count to visibly show through the
     // open dropdown menu.
     <header className="relative z-20 border-b border-grid bg-panel/80 backdrop-blur">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-3">
+      {/* flex-wrap + the two groups' own shrink/basis rules let this stay a
+          single row on desktop but drop the three nav links to their own
+          line under the logo/avatar on a narrow phone, instead of either
+          overflowing sideways or squeezing everything down to the point of
+          overlap. */}
+      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-y-2 px-4 py-4 sm:px-6 sm:py-6">
+        <div className="flex min-w-0 items-center gap-3">
           {/* Final logo artwork (exported PNG, in public/logo.png) - a
               figure leaping up a set of ascending bars, replacing the
               earlier hand-coded SVG drafts. */}
-          <img src="/logo.png" alt="JobHop" className="h-11 w-11 rounded-lg" />
-          <span className="font-display text-xl font-semibold tracking-tight">JobHop</span>
+          <img src="/logo.png" alt="JobHop" className="h-9 w-9 flex-shrink-0 rounded-lg sm:h-11 sm:w-11" />
+          <span className="font-display text-lg font-semibold tracking-tight sm:text-xl">JobHop</span>
           {viewingSomeoneElse && viewed?.profile && (
-            <span className="ml-1 rounded-full bg-grid/50 px-2.5 py-1 text-[11px] font-medium text-ink2">
+            <span className="ml-1 hidden truncate rounded-full bg-grid/50 px-2.5 py-1 text-[11px] font-medium text-ink2 sm:inline-block">
               Viewing {viewed.profile.full_name || viewed.profile.username}
             </span>
           )}
         </div>
-        <nav className="flex items-center gap-3">
+        <nav className="order-last flex w-full items-center justify-center gap-1.5 sm:order-none sm:w-auto sm:justify-start sm:gap-3">
           {viewingSomeoneElse ? (
             <ViewedNavLinks friendId={friendMatch.params.friendId} />
           ) : (
             <OwnNavLinks />
           )}
-          {user && <AvatarMenu />}
         </nav>
+        {user && <AvatarMenu />}
       </div>
     </header>
   );

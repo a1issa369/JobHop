@@ -71,7 +71,15 @@ export default function Login() {
           </Link>
         </Field>
 
-        {error && <p className="text-sm text-bad">{error}</p>}
+        {/* role="alert" so this is reliably findable regardless of Supabase's
+            exact wording for a given failure (which varies - normally
+            "Invalid login credentials", but can read differently if its own
+            brute-force protection has kicked in from repeated attempts) */}
+        {error && (
+          <p role="alert" className="text-sm text-bad">
+            {error}
+          </p>
+        )}
 
         <button disabled={busy} className="btn-primary w-full">
           {busy ? 'Signing in…' : 'Sign in'}
@@ -82,6 +90,16 @@ export default function Login() {
         New here?{' '}
         <Link to="/signup" className="text-signal hover:underline">
           Create an account
+        </Link>
+      </p>
+
+      <p className="mt-3 text-xs text-ink2">
+        <Link to="/terms" className="text-signal hover:underline">
+          Terms
+        </Link>{' '}
+        ·{' '}
+        <Link to="/privacy" className="text-signal hover:underline">
+          Privacy Policy
         </Link>
       </p>
     </div>

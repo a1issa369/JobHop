@@ -1,0 +1,16 @@
+# JobHop is mostly a signed-in app — everything past the front door needs
+# an account, and those pages redirect anonymous crawlers to /login anyway.
+# Only the public, unauthenticated routes are worth crawl budget.
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /signup
+Disallow: /friends
+Disallow: /profile
+Disallow: /challenges
+Disallow: /settings
+Disallow: /notifications
+Disallow: /reset-password
+Disallow: /forgot-password
+
+Sitemap: https://jobhop.app/sitemap.xml

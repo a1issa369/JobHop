@@ -10,19 +10,30 @@ import { createContext, useCallback, useContext, useRef, useState } from 'react'
 const ToastContext = createContext(null);
 
 const AUTO_DISMISS_MS = 4000;
+// How long the exit transition runs before the toast is actually removed
+// from state - must match the `duration-300` class below.
+const EXIT_MS = 300;
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const idRef = useRef(0);
 
+  // Two-phase removal: first flag the toast as `leaving` so its exit
+  // transition (opacity + a further drift downward) can play, then drop it
+  // from state once that transition has had time to finish. Dismissing by
+  // hand (the ✕ button) goes through this same path, so it animates out
+  // the same way an auto-dismiss does rather than vanishing instantly.
   const dismiss = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, EXIT_MS);
   }, []);
 
   const showToast = useCallback(
     (message, type = 'error') => {
       const id = ++idRef.current;
-      setToasts((prev) => [...prev, { id, message, type }]);
+      setToasts((prev) => [...prev, { id, message, type, leaving: false }]);
       setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
     },
     [dismiss]
@@ -31,22 +42,23 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={showToast}>
       {children}
-      <div className="pointer-events-none fixed right-4 top-4 z-50 flex w-80 flex-col gap-2">
+      {/* Top-center rather than a corner, so a toast reads as it dropping in
+          from the middle of the screen and settling, not sliding in from an
+          edge - see the toast-in/toast-out keyframes in index.css. */}
+      <div className="pointer-events-none fixed inset-x-0 top-6 z-50 flex flex-col items-center gap-2 px-4">
         {toasts.map((t) => (
           <div
             key={t.id}
             role="alert"
-            className={`pointer-events-auto flex items-start justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm shadow-lg animate-toast-in ${
-              t.type === 'success'
-                ? 'border-good/40 bg-good/10 text-good'
-                : 'border-bad/40 bg-bad/10 text-bad'
-            }`}
+            className={`pointer-events-auto flex w-full max-w-sm items-start justify-between gap-3 rounded-lg border-l-4 bg-panel/95 px-4 py-3 text-sm text-paper shadow-lg backdrop-blur-sm transition-all duration-300 ease-in animate-toast-in ${
+              t.leaving ? 'translate-y-3 opacity-0' : 'translate-y-0 opacity-100'
+            } ${t.type === 'success' ? 'border-good' : 'border-route'}`}
           >
             <span>{t.message}</span>
             <button
               onClick={() => dismiss(t.id)}
               aria-label="Dismiss"
-              className="flex-shrink-0 opacity-70 hover:opacity-100"
+              className="flex-shrink-0 text-ink2 opacity-70 hover:opacity-100"
             >
               ✕
             </button>

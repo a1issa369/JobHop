@@ -129,6 +129,18 @@ export default function Signup() {
           Sign in
         </Link>
       </p>
+
+      <p className="mt-3 text-xs text-ink2">
+        By creating an account, you agree to our{' '}
+        <Link to="/terms" className="text-signal hover:underline">
+          Terms
+        </Link>{' '}
+        and{' '}
+        <Link to="/privacy" className="text-signal hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </div>
   );
 }

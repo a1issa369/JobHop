@@ -104,21 +104,23 @@ input:-webkit-autofill:active {
   animation: stair-step 1.4s ease-in-out infinite;
 }
 
-/* Toast slide-in (see ToastContext.jsx) - a small pop/settle on entry so a
-   new toast doesn't just silently appear, which is easy to miss in a
-   corner of the screen. */
+/* Toast entrance (see ToastContext.jsx) - drops in from just above its
+   resting spot top-center and settles, rather than sliding in flat from a
+   screen edge. The matching exit (toast leaving the DOM) is handled as a
+   plain CSS transition in ToastContext.jsx itself (the `leaving` state),
+   continuing that same downward drift while fading out. */
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-18px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 .animate-toast-in {
-  animation: toast-in 0.2s ease-out;
+  animation: toast-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* dotted "route" connector drawn between kanban columns */

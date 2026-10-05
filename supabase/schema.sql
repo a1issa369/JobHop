@@ -641,6 +641,48 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- Lets either participant end an ACTIVE duel early as a forfeit - see
+-- migration 016_forfeit_challenge.sql for the full rationale. Forfeiting
+-- is always a loss for whoever calls this, regardless of the current
+-- tally, and the final score is recorded as whatever had actually
+-- accumulated up to that moment.
+create function forfeit_challenge(p_challenge_id uuid)
+returns challenges as $$
+declare
+  c challenges;
+  result challenges;
+  c_count int;
+  o_count int;
+begin
+  select * into c from challenges where id = p_challenge_id;
+  if c is null then
+    raise exception 'Challenge not found';
+  end if;
+  if auth.uid() not in (c.challenger_id, c.opponent_id) then
+    raise exception 'Not a participant in this challenge';
+  end if;
+  if c.status <> 'active' then
+    raise exception 'Only an active duel can be forfeited';
+  end if;
+
+  select count(*) into c_count from applications
+    where user_id = c.challenger_id and created_at >= c.starts_at and created_at <= now();
+  select count(*) into o_count from applications
+    where user_id = c.opponent_id and created_at >= c.starts_at and created_at <= now();
+
+  update challenges
+    set status = 'completed',
+        ends_at = now(),
+        challenger_count = c_count,
+        opponent_count = o_count,
+        winner_id = case when auth.uid() = c.challenger_id then c.opponent_id else c.challenger_id end
+    where id = p_challenge_id
+    returning * into result;
+
+  return result;
+end;
+$$ language plpgsql security definer;
+
 create function challenge_progress(p_challenge_id uuid)
 returns table(challenger_count int, opponent_count int) as $$
 declare
@@ -685,6 +727,7 @@ grant execute on function create_challenge(uuid, int) to authenticated;
 grant execute on function respond_to_challenge(uuid, boolean) to authenticated;
 grant execute on function cancel_challenge(uuid) to authenticated;
 grant execute on function resolve_challenge(uuid) to authenticated;
+grant execute on function forfeit_challenge(uuid) to authenticated;
 grant execute on function challenge_progress(uuid) to authenticated;
 grant execute on function head_to_head(uuid) to authenticated;
 

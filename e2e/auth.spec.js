@@ -25,6 +25,14 @@ test.describe('auth', () => {
     await page.getByLabel('Email').fill(TEST_USER.email ?? 'nobody@example.com');
     await page.getByLabel('Password').fill('DefinitelyWrong1!');
     await page.getByRole('button', { name: /sign in/i }).click();
-    await expect(page.getByText(/invalid|failed|incorrect/i)).toBeVisible();
+    // Not pinned to exact wording - Supabase's own message for this varies
+    // (normally "Invalid login credentials", but reads differently once
+    // its own brute-force protection kicks in from repeated attempts
+    // against the same account, which this suite's own wrong-password
+    // tests inevitably rack up over many runs). What actually matters is
+    // that SOME error shows and the app doesn't silently fail or navigate
+    // through - see Login.jsx's role="alert" on this paragraph.
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page).not.toHaveURL('/');
   });
 });

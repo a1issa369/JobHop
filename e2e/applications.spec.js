@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { login, TEST_USER, uniqueName } from './helpers.js';
+import { uniqueName } from './helpers.js';
+
+// Starts already signed in via the session global-setup.js saved, instead
+// of a fresh login() per test - see global-setup.js for why.
+test.use({ storageState: 'e2e/.auth/user.json' });
 
 test.describe('application CRUD + kanban', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, TEST_USER);
+    await page.goto('/');
+    await page.getByRole('heading', { name: 'Your route' }).waitFor();
   });
 
   test('creates, edits, and deletes an application', async ({ page }) => {
@@ -49,10 +54,31 @@ test.describe('application CRUD + kanban', () => {
     await page.getByLabel('Stage').selectOption('applied');
     await page.getByRole('button', { name: /save changes/i }).click();
 
+    // Dashboard's handleSave only closes the modal AFTER the Supabase write
+    // actually succeeds (it's deliberately not optimistic for the close
+    // itself, see Dashboard.jsx) - so waiting for the modal to disappear is
+    // what proves the write landed, not just that the click fired. Without
+    // this wait, the reload below can race ahead of the in-flight request
+    // and fetch the pre-save data, which is what was actually making this
+    // test flaky (not pagination - that fix stays too, since it's still a
+    // real issue once the write has landed).
+    await expect(page.getByRole('button', { name: /save changes/i })).not.toBeVisible();
+
     // Reload to prove this round-tripped through the database rather than
     // only updating local React state.
     await page.reload();
     await page.getByRole('button', { name: /^applied/i }).click();
+
+    // The board sorts oldest-first and paginates 12 per page, so the card
+    // just created - the newest one in this stage - lands on the LAST
+    // page, not necessarily page 1. That's invisible with a clean account,
+    // but any stray cards left behind by an earlier interrupted run push
+    // it further out, which is exactly what made this flaky. Walk forward
+    // until "Next" is disabled instead of assuming page 1.
+    const nextBtn = page.getByRole('button', { name: 'Next' });
+    while (await nextBtn.isEnabled()) {
+      await nextBtn.click();
+    }
     await expect(page.getByText(company, { exact: true })).toBeVisible();
 
     // Cleanup so repeat runs don't pile up stray test cards.

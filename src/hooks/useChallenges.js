@@ -96,10 +96,26 @@ export function useChallenges() {
     return { data, error: err };
   }
 
+  // Ends an active duel early as an automatic loss for whoever forfeits
+  // (see migration 016) - a real feature (bow out of a duel you're not
+  // going to finish) that also happens to be the only way to free up a
+  // duel slot before its multi-day window naturally ends.
+  async function forfeit(challengeId) {
+    const { data, error: err } = await supabase.rpc('forfeit_challenge', {
+      p_challenge_id: challengeId
+    });
+    if (!err) refresh();
+    return { data, error: err };
+  }
+
   const incoming = challenges.filter((c) => c.status === 'pending' && c.opponent_id === user?.id);
   const outgoing = challenges.filter((c) => c.status === 'pending' && c.challenger_id === user?.id);
   const active = challenges.filter((c) => c.status === 'active');
-  const history = challenges.filter((c) => ['completed', 'declined', 'cancelled'].includes(c.status));
+  // Declined and cancelled duels never actually happened - nobody played a
+  // single day of them - so they don't belong in a win/loss history. Only
+  // duels that actually ran to completion (naturally or via forfeit, both
+  // land on 'completed') show up here.
+  const history = challenges.filter((c) => c.status === 'completed');
 
   return {
     challenges,
@@ -112,6 +128,7 @@ export function useChallenges() {
     refresh,
     sendChallenge,
     respond,
-    cancel
+    cancel,
+    forfeit
   };
 }

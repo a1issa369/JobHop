@@ -38,7 +38,16 @@ function describe(n) {
       };
     case 'friend_application':
       return {
-        text: `${name} applied to ${n.data.company} · ${n.data.role}.`,
+        // Company/role are the part actually worth scanning for in a list
+        // of these - bumped to semibold so they stand out from the rest of
+        // the sentence without turning into something that looks clickable
+        // on its own (the whole row is already the link).
+        text: (
+          <>
+            {name} has applied to <span className="font-semibold">{n.data.company}</span> as a{' '}
+            <span className="font-semibold">{n.data.role}</span>.
+          </>
+        ),
         to: `/friends/${n.actor_id}/board`
       };
     default:

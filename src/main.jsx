@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
@@ -24,5 +25,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </BrowserRouter>
       </ToastProvider>
     </ErrorBoundary>
+    {/* Vercel's own page-view/web-vitals tracking - cookie-free (no consent
+        banner needed) and only does anything once this is actually
+        deployed on Vercel, so it's silent in local dev. */}
+    <Analytics />
   </React.StrictMode>
 );

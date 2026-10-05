@@ -61,10 +61,11 @@ function TugBar({ mine, theirs, theirName }) {
 export default function ChallengeWidget({ targetId, targetName, targetAvatar }) {
   const { profile: myProfile } = useProfileContext();
   const { record, loading: recordLoading, refresh: refreshRecord } = useHeadToHead(targetId);
-  const { challenges, loading: challengesLoading, sendChallenge, respond, cancel } = useChallenges();
+  const { challenges, loading: challengesLoading, sendChallenge, respond, cancel, forfeit } = useChallenges();
   const [duration, setDuration] = useState(3);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(null);
+  const [forfeitArmed, setForfeitArmed] = useState(false);
   const showToast = useToast();
 
   const withOpponent = challenges.find(
@@ -115,6 +116,22 @@ export default function ChallengeWidget({ targetId, targetName, targetAvatar }) 
     const { error: err } = await cancel(withOpponent.id);
     setBusy(false);
     if (err) showToast(err.message);
+  }
+
+  // Same confirm-on-second-click pattern as the Duels page - a forfeit is
+  // an automatic loss, so it shouldn't fire on a single accidental click.
+  function handleForfeitClick() {
+    if (!forfeitArmed) {
+      setForfeitArmed(true);
+      setTimeout(() => setForfeitArmed(false), 4000);
+      return;
+    }
+    setForfeitArmed(false);
+    setBusy(true);
+    forfeit(withOpponent.id).then(({ error: err }) => {
+      setBusy(false);
+      if (err) showToast(err.message);
+    });
   }
 
   const { wins, draws, losses } = record ?? { wins: 0, draws: 0, losses: 0 };
@@ -206,6 +223,13 @@ export default function ChallengeWidget({ targetId, targetName, targetAvatar }) 
               Duel in progress · {timeLeft(withOpponent.ends_at)}
             </p>
             {progress && <TugBar mine={mine} theirs={theirs} theirName={targetName} />}
+            <button
+              onClick={handleForfeitClick}
+              disabled={busy}
+              className={`w-full text-xs ${forfeitArmed ? 'btn-primary bg-bad hover:bg-bad/90' : 'btn-secondary'}`}
+            >
+              {forfeitArmed ? 'Click again to forfeit' : 'Forfeit duel'}
+            </button>
           </div>
         )}
       </div>

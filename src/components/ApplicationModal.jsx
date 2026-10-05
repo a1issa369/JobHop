@@ -42,7 +42,6 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
   // we don't show red outlines before they've had a chance to type anything.
   const [touched, setTouched] = useState({});
   const [attempted, setAttempted] = useState(false);
-  const [error, setError] = useState('');
   const showToast = useToast();
   const isEdit = Boolean(initial?.id);
 
@@ -80,21 +79,30 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
     setAttempted(true);
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
+      // An incomplete card (a required field left blank) - the red
+      // outline/label on the field itself (showInvalid above) already
+      // points at exactly what's missing, so this is just a nudge to look
+      // there rather than a second, more detailed error message.
+      showToast(parsed.error.issues[0].message);
       return;
     }
     if (isNewPastDeadline()) {
       showToast("That deadline is in the past - double check the date.");
       return;
     }
-    setError('');
     onSave({
       ...parsed.data,
-      // Empty string isn't a valid value for either column (the DB check
-      // constraint on work_type only allows null or one of the three
-      // options) - normalize "not filled in yet" to null for both.
+      // Empty string isn't a valid value for any of these three columns
+      // (the DB's deadline column is a real `date`, and the work_type check
+      // constraint only allows null or one of the three options) -
+      // normalize "not filled in yet" to null for all of them. Deadline is
+      // the one that actually broke before this fix: submitting a card
+      // with no deadline sent '' straight to Postgres, which rejected it
+      // with a raw "invalid input syntax for type date" error that had
+      // nothing to do with what the user did wrong.
       location: parsed.data.location || null,
       work_type: parsed.data.work_type || null,
+      deadline: parsed.data.deadline || null,
       id: initial?.id
     });
   }
@@ -112,7 +120,7 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Company" required invalid={showInvalid('company')}>
               <input
                 className={`input ${showInvalid('company') ? 'input-invalid' : ''}`}
@@ -146,7 +154,7 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
             </select>
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Location">
               <input
                 className="input"
@@ -186,8 +194,6 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
           </Field>
-
-          {error && <p className="text-sm text-bad">{error}</p>}
 
           <div className="flex items-center justify-between pt-2">
             {isEdit ? (

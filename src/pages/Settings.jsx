@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useProfileContext } from '../context/ProfileContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
 import { analyzePassword, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/password.js';
 import { uploadAvatar } from '../utils/avatar.js';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter.jsx';
@@ -35,6 +36,21 @@ export default function Settings() {
             {s.label}
           </button>
         ))}
+
+        <div className="mt-4 space-y-1 border-t border-grid pt-3">
+          <Link
+            to="/terms"
+            className="block rounded px-3 py-1.5 text-xs text-ink2 hover:text-paper"
+          >
+            Terms
+          </Link>
+          <Link
+            to="/privacy"
+            className="block rounded px-3 py-1.5 text-xs text-ink2 hover:text-paper"
+          >
+            Privacy Policy
+          </Link>
+        </div>
       </nav>
 
       <div className="min-w-0 flex-1 max-w-lg">
@@ -67,16 +83,30 @@ function normalizeUrl(value) {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
+// Catches the two most common mistakes - pasting something that isn't a
+// URL at all, or pasting the right kind of thing on the wrong field (a
+// GitHub link in the LinkedIn box) - without being so strict about the
+// rest of the URL that a real profile link gets rejected.
+function isValidProfileUrl(value, domain) {
+  if (!value) return true; // empty is fine, this field is optional
+  let url;
+  try {
+    url = new URL(normalizeUrl(value));
+  } catch {
+    return false;
+  }
+  return url.hostname.toLowerCase().endsWith(domain);
+}
+
 function ProfileSection() {
   const { user } = useAuth();
   const { profile, loading, error: loadError, refresh } = useProfileContext();
   const [form, setForm] = useState(null);
-  const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
-  const [avatarError, setAvatarError] = useState('');
   const avatarInputRef = useRef(null);
+  const showToast = useToast();
 
   // Seed the editable form once the profile has loaded, without
   // clobbering in-progress edits on a later re-fetch.
@@ -111,11 +141,10 @@ function ProfileSection() {
     e.target.value = ''; // allow re-selecting the same file later
     if (!file) return;
     setAvatarBusy(true);
-    setAvatarError('');
     const { error: uploadErr } = await uploadAvatar(user.id, file);
     setAvatarBusy(false);
     if (uploadErr) {
-      setAvatarError(uploadErr.message);
+      showToast(uploadErr.message);
       return;
     }
     refresh();
@@ -123,11 +152,18 @@ function ProfileSection() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
     setSaved(false);
     const parsed = profileSchema.safeParse(form);
     if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
+      showToast(parsed.error.issues[0].message);
+      return;
+    }
+    if (!isValidProfileUrl(parsed.data.linkedin_url, 'linkedin.com')) {
+      showToast("That doesn't look like a LinkedIn link.");
+      return;
+    }
+    if (!isValidProfileUrl(parsed.data.github_url, 'github.com')) {
+      showToast("That doesn't look like a GitHub link.");
       return;
     }
 
@@ -143,7 +179,7 @@ function ProfileSection() {
     setBusy(false);
 
     if (updateErr) {
-      setError(
+      showToast(
         /unique/i.test(updateErr.message)
           ? 'That username is already taken.'
           : updateErr.message
@@ -162,7 +198,7 @@ function ProfileSection() {
         {profile.avatar_url ? (
           <img
             src={profile.avatar_url}
-            alt=""
+            alt="Your current profile photo"
             className="h-16 w-16 flex-shrink-0 rounded-full object-cover"
           />
         ) : (
@@ -187,7 +223,6 @@ function ProfileSection() {
             {avatarBusy ? 'Uploading…' : profile.avatar_url ? 'Change photo' : 'Upload photo'}
           </button>
           <p className="mt-1 text-[11px] text-ink2">JPG, PNG, WEBP, or GIF, up to 5MB.</p>
-          {avatarError && <p className="mt-1 text-xs text-bad">{avatarError}</p>}
         </div>
       </div>
 
@@ -230,8 +265,7 @@ function ProfileSection() {
           />
         </Field>
 
-        {error && <p className="text-sm text-bad">{error}</p>}
-        {saved && !error && <p className="text-sm text-good">Profile updated.</p>}
+        {saved && <p className="text-sm text-good">Profile updated.</p>}
 
         <button disabled={busy} className="btn-primary">
           {busy ? 'Saving…' : 'Save changes'}
@@ -250,21 +284,49 @@ const passwordSchema = z
   .regex(/[^A-Za-z0-9]/);
 
 function PasswordSection() {
-  const { user, changePassword } = useAuth();
+  const { user, changePassword, verifyPassword } = useAuth();
   const navigate = useNavigate();
+  const showToast = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [error, setError] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  // 'idle' (not checked yet, or stale after an edit) | 'checking' |
+  // 'valid' | 'invalid' - re-authenticates against Supabase on blur (not
+  // every keystroke) so the button itself can reflect whether the typed
+  // current password is actually correct, not just non-empty.
+  const [currentCheck, setCurrentCheck] = useState('idle');
+  const checkTokenRef = useRef(0);
 
   const strength = analyzePassword(newPassword);
-  const canSubmit = Boolean(currentPassword) && strength.level === 'strong';
+  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
+  const canSubmit =
+    currentCheck === 'valid' && strength.level === 'strong' && passwordsMatch;
+
+  async function handleCurrentBlur() {
+    if (!currentPassword) {
+      setCurrentCheck('idle');
+      return;
+    }
+    const token = ++checkTokenRef.current;
+    setCurrentCheck('checking');
+    const { error: err } = await verifyPassword(currentPassword);
+    if (token !== checkTokenRef.current) return; // a newer check superseded this one
+    setCurrentCheck(err ? 'invalid' : 'valid');
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
+    if (currentCheck !== 'valid') {
+      showToast('Enter your current password correctly before continuing.');
+      return;
+    }
     if (!passwordSchema.safeParse(newPassword).success) {
-      setError('Choose a Strong new password (green bar) before continuing.');
+      showToast('Choose a Strong new password (green bar) before continuing.');
+      return;
+    }
+    if (!passwordsMatch) {
+      showToast("The retyped password doesn't match.");
       return;
     }
 
@@ -272,7 +334,7 @@ function PasswordSection() {
     const { error: changeErr } = await changePassword(currentPassword, newPassword);
     if (changeErr) {
       setBusy(false);
-      setError(changeErr.message);
+      showToast(changeErr.message);
       return;
     }
 
@@ -294,9 +356,23 @@ function PasswordSection() {
             type="password"
             className="input"
             value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
+            onChange={(e) => {
+              setCurrentPassword(e.target.value);
+              setCurrentCheck('idle'); // any edit invalidates the last check
+            }}
+            onBlur={handleCurrentBlur}
             autoComplete="current-password"
+            maxLength={MAX_PASSWORD_LENGTH}
           />
+          {currentCheck === 'checking' && (
+            <p className="mt-1 text-[11px] text-ink2">Checking…</p>
+          )}
+          {currentCheck === 'valid' && (
+            <p className="mt-1 text-[11px] text-good">Verified.</p>
+          )}
+          {currentCheck === 'invalid' && (
+            <p className="mt-1 text-[11px] text-bad">That's not your current password.</p>
+          )}
         </Field>
         <Field label="New password">
           <input
@@ -314,8 +390,19 @@ function PasswordSection() {
           </p>
           <PasswordStrengthMeter password={newPassword} />
         </Field>
-
-        {error && <p className="text-sm text-bad">{error}</p>}
+        <Field label="Retype new password">
+          <input
+            type="password"
+            className="input"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+            maxLength={MAX_PASSWORD_LENGTH}
+          />
+          {confirmPassword.length > 0 && !passwordsMatch && (
+            <p className="mt-1 text-[11px] text-bad">Doesn't match the new password above.</p>
+          )}
+        </Field>
 
         <button disabled={busy || !canSubmit} className="btn-primary">
           {busy ? 'Updating…' : 'Change password'}
@@ -341,10 +428,10 @@ function DangerSection() {
 // pattern the "Change password" form uses, since this can't be undone.
 function DeleteAllCardsCard() {
   const { user, verifyPassword } = useAuth();
+  const showToast = useToast();
   const [confirmText, setConfirmText] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
   const [done, setDone] = useState(false);
 
   const canDelete = confirmText.trim().toUpperCase() === 'DELETE ALL' && password.length > 0;
@@ -352,13 +439,12 @@ function DeleteAllCardsCard() {
   async function handleDelete() {
     if (!canDelete) return;
     setBusy(true);
-    setError('');
     setDone(false);
 
     const { error: pwErr } = await verifyPassword(password);
     if (pwErr) {
       setBusy(false);
-      setError(pwErr.message);
+      showToast(pwErr.message);
       return;
     }
 
@@ -366,7 +452,7 @@ function DeleteAllCardsCard() {
     setBusy(false);
 
     if (delErr) {
-      setError(delErr.message);
+      showToast(delErr.message);
       return;
     }
     setConfirmText('');
@@ -405,10 +491,10 @@ function DeleteAllCardsCard() {
             setDone(false);
           }}
           autoComplete="current-password"
+          maxLength={MAX_PASSWORD_LENGTH}
         />
       </label>
 
-      {error && <p className="mt-2 text-sm text-bad">{error}</p>}
       {done && <p className="mt-2 text-sm text-good">All cards deleted.</p>}
 
       <button
@@ -422,19 +508,30 @@ function DeleteAllCardsCard() {
   );
 }
 
+// Same re-authentication-before-destroying-anything pattern as
+// "Delete all cards" - this one didn't ask for the account password at
+// all before, which meant anyone at an already-signed-in, unlocked
+// browser could wipe the whole account with nothing but the DELETE text.
 function DeleteAccountCard() {
-  const { signOut } = useAuth();
+  const { signOut, verifyPassword } = useAuth();
   const navigate = useNavigate();
+  const showToast = useToast();
   const [confirmText, setConfirmText] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
 
-  const canDelete = confirmText.trim().toUpperCase() === 'DELETE';
+  const canDelete = confirmText.trim().toUpperCase() === 'DELETE' && password.length > 0;
 
   async function handleDelete() {
     if (!canDelete) return;
     setBusy(true);
-    setError('');
+
+    const { error: pwErr } = await verifyPassword(password);
+    if (pwErr) {
+      setBusy(false);
+      showToast(pwErr.message);
+      return;
+    }
 
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
@@ -444,7 +541,7 @@ function DeleteAccountCard() {
     });
 
     if (fnError || data?.error) {
-      setError(fnError?.message ?? data?.error ?? 'Could not delete your account.');
+      showToast(fnError?.message ?? data?.error ?? 'Could not delete your account.');
       setBusy(false);
       return;
     }
@@ -470,7 +567,17 @@ function DeleteAccountCard() {
         />
       </label>
 
-      {error && <p className="mt-2 text-sm text-bad">{error}</p>}
+      <label className="mt-3 block text-xs text-ink2">
+        Your password
+        <input
+          type="password"
+          className="input mt-1"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          maxLength={MAX_PASSWORD_LENGTH}
+        />
+      </label>
 
       <button
         onClick={handleDelete}

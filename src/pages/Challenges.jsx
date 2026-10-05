@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useProfileContext } from '../context/ProfileContext.jsx';
@@ -34,26 +35,53 @@ function DuelCard({ accent, children }) {
   return <li className={`card-surface flex items-center gap-4 border p-4 ${accentClass}`}>{children}</li>;
 }
 
+// History now only ever contains 'completed' rows (declined/cancelled duels
+// never happened, so they're filtered out before this ever renders - see
+// useChallenges' history filter), so the only outcomes left are Won/Lost/Draw.
 function OutcomeBadge({ outcome }) {
   const styles = {
     Won: 'bg-good/15 text-good',
     Lost: 'bg-bad/15 text-bad',
-    Draw: 'bg-ink2/15 text-ink2',
-    declined: 'bg-ink2/15 text-ink2',
-    cancelled: 'bg-ink2/15 text-ink2'
+    Draw: 'bg-ink2/15 text-ink2'
   };
-  const label = { declined: 'Declined', cancelled: 'Cancelled' }[outcome] ?? outcome;
   return (
     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[outcome] ?? 'bg-ink2/15 text-ink2'}`}>
-      {label}
+      {outcome}
     </span>
+  );
+}
+
+// A forfeit is a real loss, not a dismiss-and-forget action, so it needs a
+// second click to actually fire - the button arms on the first click and
+// shows "Click again to forfeit" for a few seconds, rather than popping a
+// native confirm() dialog that doesn't match the rest of the UI.
+function ForfeitButton({ onConfirm }) {
+  const [armed, setArmed] = useState(false);
+
+  function handleClick() {
+    if (!armed) {
+      setArmed(true);
+      setTimeout(() => setArmed(false), 4000);
+      return;
+    }
+    setArmed(false);
+    onConfirm();
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`flex-shrink-0 text-xs ${armed ? 'btn-primary bg-bad hover:bg-bad/90' : 'btn-secondary'}`}
+    >
+      {armed ? 'Click again to forfeit' : 'Forfeit'}
+    </button>
   );
 }
 
 export default function Challenges() {
   const { user } = useAuth();
   const { profile: myProfile } = useProfileContext();
-  const { incoming, outgoing, active, history, loading, error, respond, cancel } = useChallenges();
+  const { incoming, outgoing, active, history, loading, error, respond, cancel, forfeit } = useChallenges();
   const showToast = useToast();
 
   // Accepting a request (or, less likely, cancelling one) can fail here if
@@ -67,6 +95,11 @@ export default function Challenges() {
 
   async function handleCancel(id) {
     const { error: err } = await cancel(id);
+    if (err) showToast(err.message);
+  }
+
+  async function handleForfeit(id) {
+    const { error: err } = await forfeit(id);
     if (err) showToast(err.message);
   }
 
@@ -169,6 +202,7 @@ export default function Challenges() {
                       {timeLeft(c.ends_at)}
                     </p>
                   </div>
+                  <ForfeitButton onConfirm={() => handleForfeit(c.id)} />
                 </DuelCard>
               );
             })}
@@ -186,14 +220,7 @@ export default function Challenges() {
               const other = otherParty(c, user.id);
               const mine = c.challenger_id === user.id ? c.challenger_count : c.opponent_count;
               const theirs = c.challenger_id === user.id ? c.opponent_count : c.challenger_count;
-              const outcome =
-                c.status !== 'completed'
-                  ? c.status
-                  : c.winner_id === user.id
-                    ? 'Won'
-                    : c.winner_id === null
-                      ? 'Draw'
-                      : 'Lost';
+              const outcome = c.winner_id === user.id ? 'Won' : c.winner_id === null ? 'Draw' : 'Lost';
               return (
                 <DuelCard key={c.id}>
                   <DuelVersus leftUrl={myProfile?.avatar_url} rightUrl={other.avatar_url} />
@@ -201,11 +228,9 @@ export default function Challenges() {
                     <Link to={`/friends/${other.id}`} className="font-medium hover:text-signal">
                       {other.full_name || other.username}
                     </Link>
-                    {c.status === 'completed' && (
-                      <p className="text-xs text-ink2">
-                        {mine} - {theirs}
-                      </p>
-                    )}
+                    <p className="text-xs text-ink2">
+                      {mine} - {theirs}
+                    </p>
                   </div>
                   <OutcomeBadge outcome={outcome} />
                 </DuelCard>

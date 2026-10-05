@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import { ProfileProvider } from './context/ProfileContext.jsx';
@@ -6,21 +7,29 @@ import { NotificationsProvider } from './context/NotificationsContext.jsx';
 import { SocialGraphProvider } from './context/SocialGraphContext.jsx';
 import Navbar from './components/Navbar.jsx';
 import ProfileSidebar from './components/ProfileSidebar.jsx';
-import Login from './pages/Login.jsx';
-import Signup from './pages/Signup.jsx';
-import ForgotPassword from './pages/ForgotPassword.jsx';
-import ResetPassword from './pages/ResetPassword.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Friends from './pages/Friends.jsx';
-import FriendProfile from './pages/FriendProfile.jsx';
-import ViewedOverview from './pages/ViewedOverview.jsx';
-import ViewedBoard from './pages/ViewedBoard.jsx';
-import ViewedFriendsList from './pages/ViewedFriendsList.jsx';
-import ViewedDuels from './pages/ViewedDuels.jsx';
-import Profile from './pages/Profile.jsx';
-import Challenges from './pages/Challenges.jsx';
-import Settings from './pages/Settings.jsx';
-import Notifications from './pages/Notifications.jsx';
+
+// Route-level code splitting: each page only downloads once someone
+// actually navigates there, instead of every page (plus chart.js, pulled in
+// by the Dashboard/Profile/ViewedOverview charts) shipping in one bundle
+// that even an anonymous visitor on the Login page has to fetch first.
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Signup = lazy(() => import('./pages/Signup.jsx'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'));
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const Friends = lazy(() => import('./pages/Friends.jsx'));
+const FriendProfile = lazy(() => import('./pages/FriendProfile.jsx'));
+const ViewedOverview = lazy(() => import('./pages/ViewedOverview.jsx'));
+const ViewedBoard = lazy(() => import('./pages/ViewedBoard.jsx'));
+const ViewedFriendsList = lazy(() => import('./pages/ViewedFriendsList.jsx'));
+const ViewedDuels = lazy(() => import('./pages/ViewedDuels.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
+const Challenges = lazy(() => import('./pages/Challenges.jsx'));
+const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Notifications = lazy(() => import('./pages/Notifications.jsx'));
+const NotFound = lazy(() => import('./pages/NotFound.jsx'));
+const Privacy = lazy(() => import('./pages/Privacy.jsx'));
+const Terms = lazy(() => import('./pages/Terms.jsx'));
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -59,6 +68,12 @@ export default function App() {
           loads - redirecting to "/" here would skip the reset form
           entirely and strand the person on the dashboard. */}
       <Route path="/reset-password" element={<ResetPassword />} />
+      {/* Not gated on `user` either way - these need to be readable before
+          signing up (that's the whole point of a terms/privacy link on the
+          signup form) and by an already-signed-in visitor who just wants
+          to re-check them later. */}
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
       <Route
         path="/"
         element={
@@ -120,14 +135,25 @@ export default function App() {
           </Protected>
         }
       />
+      {/* Catch-all - must stay last. Unauthenticated-but-unmatched paths
+          still render this directly rather than bouncing to /login, since
+          "page doesn't exist" is a different, more honest message than
+          "please sign in". */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
+
+  // Covers the brief gap while a lazy-loaded page's chunk is still
+  // downloading - same "Loading..." treatment Protected already uses below
+  // for the auth check, so switching pages doesn't introduce a visually
+  // different loading state from switching auth state.
+  const suspendedRoutes = <Suspense fallback={<CenteredNote text="Loading..." />}>{routes}</Suspense>;
 
   if (!showChrome) {
     return (
       <div className="min-h-screen">
         <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
-          <div className="min-w-0 flex-1">{routes}</div>
+          <div className="min-w-0 flex-1">{suspendedRoutes}</div>
         </main>
       </div>
     );
@@ -142,7 +168,7 @@ export default function App() {
               <Navbar />
               <main className="mx-auto flex max-w-[1600px] gap-6 px-6 py-6">
                 <ProfileSidebar />
-                <div className="min-w-0 flex-1">{routes}</div>
+                <div className="min-w-0 flex-1">{suspendedRoutes}</div>
               </main>
             </NotificationsProvider>
           </ProfileProvider>
