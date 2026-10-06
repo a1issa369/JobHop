@@ -52,6 +52,22 @@ keeps your test accounts out of the numbers (`stats_exclusions`). Both tables ha
 client-facing policies, so they can only be changed from the SQL editor, and the stats
 function returns counts only, never emails, names, or application contents.
 
+## Continuous integration
+
+`.github/workflows/e2e.yml` builds the app and runs the Playwright suite on every push to
+`main`, every pull request, and on demand (Actions tab, "Run workflow"). It must point at a
+**staging** Supabase project, never production, because the tests create and delete real
+accounts, cards, friendships and duels. Setup, once:
+
+1. Create a second (free) Supabase project, run `supabase/schema.sql` in its SQL editor, and
+   sign up and confirm the test accounts described in `.env.test.example`.
+2. In GitHub, go to Settings, Secrets and variables, Actions, and add these repository secrets:
+   `STAGING_SUPABASE_URL`, `STAGING_SUPABASE_ANON_KEY`, `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`,
+   `TEST_USER2_EMAIL`, `TEST_USER2_PASSWORD`, `TEST_USER2_USERNAME`. Add the `TEST_USER3_*` and
+   `TEST_USER4_*` pairs as well to enable the duel-cap test; without them it skips itself.
+3. Push. Results appear under the Actions tab; a failed run uploads the Playwright report and
+   traces as a downloadable artifact for 7 days.
+
 ## Authentication
 
 Email/password only for now, via Supabase Auth. Signup requires a password

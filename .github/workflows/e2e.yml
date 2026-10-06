@@ -1,0 +1,66 @@
+name: E2E tests
+
+# Runs the Playwright suite against a STAGING Supabase project (never
+# production: the tests create and delete real accounts, cards, friendships
+# and duels). Connection details come from repository secrets, see README.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Every run signs in as the same shared test accounts, so two runs at once
+# would trip Supabase's sign-in rate limit and trample each other's data.
+# Queue them instead of overlapping.
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      TEST_USER2_EMAIL: ${{ secrets.TEST_USER2_EMAIL }}
+      TEST_USER2_PASSWORD: ${{ secrets.TEST_USER2_PASSWORD }}
+      TEST_USER2_USERNAME: ${{ secrets.TEST_USER2_USERNAME }}
+      # Optional: only needed for the duel-cap test. Leave the secrets unset
+      # and that one test skips itself.
+      TEST_USER3_EMAIL: ${{ secrets.TEST_USER3_EMAIL }}
+      TEST_USER3_PASSWORD: ${{ secrets.TEST_USER3_PASSWORD }}
+      TEST_USER4_EMAIL: ${{ secrets.TEST_USER4_EMAIL }}
+      TEST_USER4_PASSWORD: ${{ secrets.TEST_USER4_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Production build check
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
