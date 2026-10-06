@@ -55,18 +55,14 @@ function returns counts only, never emails, names, or application contents.
 ## Continuous integration
 
 `.github/workflows/e2e.yml` builds the app and runs the Playwright suite on every push to
-`main`, every pull request, and on demand (Actions tab, "Run workflow"). It must point at a
-**staging** Supabase project, never production, because the tests create and delete real
-accounts, cards, friendships and duels. Setup, once:
+`main`, every pull request, and on demand (Actions tab, "Run workflow"). It needs no secrets
+and never touches your real Supabase project: each run starts a throwaway local Supabase stack
+with the Supabase CLI, loads `supabase/schema.sql`, creates four confirmed test accounts through
+the auth admin API, runs all 12 tests (including the duel-cap one), and discards everything.
+A failed run uploads the Playwright report and traces as a downloadable artifact for 7 days.
 
-1. Create a second (free) Supabase project, run `supabase/schema.sql` in its SQL editor, and
-   sign up and confirm the test accounts described in `.env.test.example`.
-2. In GitHub, go to Settings, Secrets and variables, Actions, and add these repository secrets:
-   `STAGING_SUPABASE_URL`, `STAGING_SUPABASE_ANON_KEY`, `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`,
-   `TEST_USER2_EMAIL`, `TEST_USER2_PASSWORD`, `TEST_USER2_USERNAME`. Add the `TEST_USER3_*` and
-   `TEST_USER4_*` pairs as well to enable the duel-cap test; without them it skips itself.
-3. Push. Results appear under the Actions tab; a failed run uploads the Playwright report and
-   traces as a downloadable artifact for 7 days.
+If you change the schema, add it to `supabase/schema.sql` too, since CI builds the database from
+that file and not from `supabase/migrations`.
 
 ## Authentication
 

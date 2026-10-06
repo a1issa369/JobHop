@@ -1,17 +1,17 @@
 name: E2E tests
 
-# Runs the Playwright suite against a STAGING Supabase project (never
-# production: the tests create and delete real accounts, cards, friendships
-# and duels). Connection details come from repository secrets, see README.
+# Runs the Playwright suite against a throwaway Supabase stack that the job
+# starts itself with the Supabase CLI (Docker is preinstalled on GitHub's
+# runners). Nothing here talks to your real Supabase project and no secrets
+# are needed: the stack, the schema and the four test accounts are created
+# fresh on every run and thrown away when the job ends.
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
 
-# Every run signs in as the same shared test accounts, so two runs at once
-# would trip Supabase's sign-in rate limit and trample each other's data.
-# Queue them instead of overlapping.
+# One run at a time, so two runs never fight over the same ports/accounts.
 concurrency:
   group: e2e
   cancel-in-progress: false
@@ -19,21 +19,21 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
-      VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
-      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
-      TEST_USER2_EMAIL: ${{ secrets.TEST_USER2_EMAIL }}
-      TEST_USER2_PASSWORD: ${{ secrets.TEST_USER2_PASSWORD }}
-      TEST_USER2_USERNAME: ${{ secrets.TEST_USER2_USERNAME }}
-      # Optional: only needed for the duel-cap test. Leave the secrets unset
-      # and that one test skips itself.
-      TEST_USER3_EMAIL: ${{ secrets.TEST_USER3_EMAIL }}
-      TEST_USER3_PASSWORD: ${{ secrets.TEST_USER3_PASSWORD }}
-      TEST_USER4_EMAIL: ${{ secrets.TEST_USER4_EMAIL }}
-      TEST_USER4_PASSWORD: ${{ secrets.TEST_USER4_PASSWORD }}
+      # Throwaway accounts. They only ever exist inside this job's local
+      # database, so committing the passwords here is fine. The password
+      # satisfies the app's signup rules (8-15 chars, upper, lower, special).
+      TEST_PASSWORD: Test-Pass1!
+      TEST_USER_EMAIL: e2e1@example.test
+      TEST_USER_PASSWORD: Test-Pass1!
+      TEST_USER2_EMAIL: e2e2@example.test
+      TEST_USER2_PASSWORD: Test-Pass1!
+      TEST_USER2_USERNAME: e2euser2
+      TEST_USER3_EMAIL: e2e3@example.test
+      TEST_USER3_PASSWORD: Test-Pass1!
+      TEST_USER4_EMAIL: e2e4@example.test
+      TEST_USER4_PASSWORD: Test-Pass1!
 
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +45,57 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start a local Supabase stack
+        run: |
+          # Minimal CLI config, generated here so the repo stays clean.
+          # Email confirmation is off so the seeded accounts can sign in.
+          mkdir -p supabase
+          cat > supabase/config.toml <<'TOML'
+          project_id = "jobhop-ci"
+
+          [auth]
+          enable_signup = true
+
+          [auth.email]
+          enable_confirmations = false
+          TOML
+          # supabase start would otherwise replay supabase/migrations on
+          # first boot. Those are incremental patches on top of schema.sql,
+          # so set them aside and load the full schema.sql ourselves below.
+          mv supabase/migrations supabase/migrations.off
+          supabase start
+
+      - name: Load schema and read connection details
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/sb.env"
+          set -a; . "$RUNNER_TEMP/sb.env"; set +a
+          DB="${DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
+          psql "$DB" -v ON_ERROR_STOP=1 -q -f supabase/schema.sql
+          {
+            echo "VITE_SUPABASE_URL=${API_URL:-http://127.0.0.1:54321}"
+            echo "VITE_SUPABASE_ANON_KEY=${ANON_KEY:-$PUBLISHABLE_KEY}"
+            echo "SB_SERVICE_KEY=${SERVICE_ROLE_KEY:-$SECRET_KEY}"
+          } >> "$GITHUB_ENV"
+
+      - name: Create the four test accounts
+        run: |
+          i=0
+          for email in "$TEST_USER_EMAIL" "$TEST_USER2_EMAIL" "$TEST_USER3_EMAIL" "$TEST_USER4_EMAIL"; do
+            i=$((i + 1))
+            code=$(curl -s -o "$RUNNER_TEMP/user$i.json" -w '%{http_code}' \
+              -X POST "$VITE_SUPABASE_URL/auth/v1/admin/users" \
+              -H "apikey: $SB_SERVICE_KEY" \
+              -H "Authorization: Bearer $SB_SERVICE_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"email\":\"$email\",\"password\":\"$TEST_PASSWORD\",\"email_confirm\":true,\"user_metadata\":{\"username\":\"e2euser$i\"}}")
+            echo "user $i ($email): HTTP $code"
+            if [ "$code" -ge 300 ]; then cat "$RUNNER_TEMP/user$i.json"; exit 1; fi
+          done
 
       - name: Production build check
         run: npm run build
@@ -64,3 +115,7 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup || true
