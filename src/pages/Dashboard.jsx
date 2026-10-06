@@ -8,6 +8,7 @@ import SankeyFlowChart from '../components/SankeyFlowChart.jsx';
 import { withRateLimit, RateLimitError } from '../lib/rateLimiter.js';
 import { useToast } from '../context/ToastContext.jsx';
 import StairsLoader from '../components/StairsLoader.jsx';
+import { isStageChangeAllowed, stageRuleMessage } from '../utils/stageConfig';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 
 export default function Dashboard() {
@@ -49,6 +50,10 @@ export default function Dashboard() {
     const previous = applications;
     const app = applications.find((a) => a.id === applicationId);
     if (!app) return;
+    if (!isStageChangeAllowed(app.stage, newStage)) {
+      showToast(stageRuleMessage(app.stage));
+      return;
+    }
 
     // Optimistic update so dropping a card on a stage box feels instant...
     setApplications((prev) =>
@@ -80,6 +85,13 @@ export default function Dashboard() {
     const previous = applications;
     const existing = values.id ? applications.find((a) => a.id === values.id) : null;
     const stageChanged = Boolean(existing) && existing.stage !== values.stage;
+
+    // The modal only offers allowed stages, so this is a backstop (and the
+    // database enforces the same rule) rather than the normal path.
+    if (!isStageChangeAllowed(existing?.stage, values.stage)) {
+      showToast(stageRuleMessage(existing?.stage));
+      return;
+    }
 
     // Optimistic update so editing a card (including moving its stage from
     // the Stage field) feels instant; rolled back below if the write fails.
@@ -160,6 +172,7 @@ export default function Dashboard() {
             applications={applications}
             onCardClick={(app) => setModalState(app)}
             onStageChange={handleStageChange}
+            onMoveRejected={showToast}
           />
           <div className="mt-6 space-y-6">
             <SankeyFlowChart applications={applications} stageHistory={stageHistory} />

@@ -1,10 +1,17 @@
-import { Chart as ChartJS } from 'chart.js';
+import { Chart as ChartJS, LinearScale, Tooltip } from 'chart.js';
 import { SankeyController, Flow } from 'chartjs-chart-sankey';
 import { Chart } from 'react-chartjs-2';
 import { STAGE_MAP } from '../utils/stageConfig';
 import { buildSankeyFlows, computeNodeTotals } from '../utils/sankeyData';
 
-ChartJS.register(SankeyController, Flow);
+// The Sankey controller draws on Chart.js's linear scale, so that has to be
+// registered here, in this file. It used to work only because ConversionChart
+// happened to register LinearScale globally, and both shared one bundle so
+// that always ran first. Now that pages load as separate chunks, the Sankey
+// chunk can run on its own and crash with '"linear" is not a registered
+// scale'. Registering the same component twice is harmless, so each chart
+// file registers everything it needs and none depends on another.
+ChartJS.register(SankeyController, Flow, LinearScale, Tooltip);
 
 // Wishlist is excluded - the flow only tracks real pipeline movement.
 // "waiting_for_response" is a synthetic node (not a real stage anyone can

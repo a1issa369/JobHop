@@ -8,7 +8,7 @@ import {
   useSensors
 } from '@dnd-kit/core';
 import ApplicationCard from './ApplicationCard.jsx';
-import { STAGES, STAGE_MAP } from '../utils/stageConfig';
+import { STAGES, STAGE_MAP, isStageChangeAllowed, stageRuleMessage } from '../utils/stageConfig';
 
 const PAGE_SIZE = 12; // 3 rows x 4 columns
 
@@ -53,7 +53,7 @@ function StageBox({ stage, count, active, justDropped, onClick }) {
   );
 }
 
-export default function KanbanBoard({ applications, onCardClick, onStageChange }) {
+export default function KanbanBoard({ applications, onCardClick, onStageChange, onMoveRejected }) {
   const [activeTab, setActiveTab] = useState('all');
   const [page, setPage] = useState(1);
   const [activeDragId, setActiveDragId] = useState(null);
@@ -88,6 +88,13 @@ export default function KanbanBoard({ applications, onCardClick, onStageChange }
     const app = applications.find((a) => a.id === active.id);
     const targetStage = over.id;
     if (!STAGE_MAP[targetStage] || !app || app.stage === targetStage) return;
+
+    // e.g. a Wishlist card dropped straight onto Offer: it snaps back and
+    // the caller explains why, instead of the move silently not happening.
+    if (!isStageChangeAllowed(app.stage, targetStage)) {
+      onMoveRejected?.(stageRuleMessage(app.stage));
+      return;
+    }
 
     onStageChange(app.id, targetStage);
     setJustDroppedStage(targetStage);

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { STAGES, WORK_TYPES } from '../utils/stageConfig';
+import { STAGES, WORK_TYPES, allowedStageKeys } from '../utils/stageConfig';
 import { useToast } from '../context/ToastContext.jsx';
 
 // Only company, role, and stage are required to create a card. Everything
@@ -44,6 +44,10 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
   const [attempted, setAttempted] = useState(false);
   const showToast = useToast();
   const isEdit = Boolean(initial?.id);
+  // New cards can only start in Wishlist/Applied, and a Wishlist card can
+  // only move on to Applied (see stageConfig.js for why).
+  const allowedStages = allowedStageKeys(isEdit ? initial.stage : null);
+  const restrictedStages = allowedStages.length < STAGES.length;
 
   function isEmpty(field) {
     return !String(form[field] ?? '').trim();
@@ -146,12 +150,19 @@ export default function ApplicationModal({ initial, onSave, onDelete, onClose })
               onChange={(e) => setForm({ ...form, stage: e.target.value })}
               onBlur={() => handleBlur('stage')}
             >
-              {STAGES.map((s) => (
+              {STAGES.filter((s) => allowedStages.includes(s.key)).map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.label}
                 </option>
               ))}
             </select>
+            {restrictedStages && (
+              <span className="mt-1 block text-[11px] text-ink2">
+                {isEdit
+                  ? 'Move a Wishlist card to Applied first, then it can go to any stage.'
+                  : 'New cards start in Wishlist or Applied, then can move to any stage.'}
+              </span>
+            )}
           </Field>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

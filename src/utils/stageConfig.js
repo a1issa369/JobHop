@@ -13,6 +13,32 @@ export const STAGES = [
 
 export const STAGE_MAP = Object.fromEntries(STAGES.map((s) => [s.key, s]));
 
+// Where a card may start and where it may go next. The Sankey chart is built
+// from stage changes and starts at Applied, so a card has to enter the
+// pipeline through Applied to show up in it:
+//   - a new card starts in Wishlist or Applied
+//   - a Wishlist card can only move to Applied
+//   - once it's past Wishlist, it can move to any stage
+// `currentStage` is null/undefined for a card that doesn't exist yet. The
+// database enforces the same rule (migration 018), so this is what keeps the
+// UI from offering a move the server would refuse.
+export const INITIAL_STAGE_KEYS = ['wishlist', 'applied'];
+
+export function allowedStageKeys(currentStage) {
+  if (!currentStage || currentStage === 'wishlist') return INITIAL_STAGE_KEYS;
+  return STAGES.map((s) => s.key);
+}
+
+export function isStageChangeAllowed(currentStage, nextStage) {
+  return allowedStageKeys(currentStage).includes(nextStage);
+}
+
+export function stageRuleMessage(currentStage) {
+  return currentStage
+    ? 'A Wishlist card can only move to Applied first.'
+    : 'New cards can only start in Wishlist or Applied.';
+}
+
 // Stages counted as "still active" in the pipeline (used for funnel math).
 export const FUNNEL_ORDER = ['applied', 'assessment', 'phone_screen', 'onsite', 'offer'];
 
