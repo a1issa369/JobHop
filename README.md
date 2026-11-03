@@ -135,6 +135,19 @@ after the user types "DELETE" to confirm.
   a direct API call can't insert a 10,000-character company name or an
   invalid stage value.
 
+## Things that broke along the way
+
+What went wrong while building this, what the cause turned out to be, and what I changed. Each item comes from a real fix in this repo's history.
+
+- **"Permission denied" even with permissive RLS policies.** After the first schema ran, every query failed with `permission denied for table`. I had assumed Row Level Security was the only gate. Postgres checks table-level privileges first and only then applies RLS, so the policies never got a chance. The fix was explicit `grant`s to `anon` and `authenticated` plus default privileges for future tables (`migrations/001`).
+- **Signup failed with a generic "Database error saving new user".** The trigger that creates a profile did a plain insert, and `username` is unique. Two people picking the same name threw a `unique_violation` inside the trigger, which aborted the whole signup with no hint to the user. The trigger now catches that one collision and appends a numeric suffix, while every other error still propagates (`migrations/004`).
+- **Friend search silently returned nothing.** This looked like a frontend bug and was not. RLS was working as designed: you can only read profile rows you already have a relationship with, so strangers were invisible to a plain `select`. Finding new people needs a narrow exception, so I added a `SECURITY DEFINER` function that returns only safe directory fields (id, username, name, avatar) and never bio, school or resume (`migrations/009`).
+- **The Sankey chart crashed with `"linear" is not a registered scale`.** It had only worked because another chart file happened to register that Chart.js scale first, since everything shared one bundle. Once pages were split into separate chunks, the Sankey chunk could run alone and fail. Every chart file now registers everything it needs, so none depends on another.
+- **Cards that skipped Applied disappeared from the Sankey diagram.** The chart is built from stage changes and starts at Applied, so a card created straight in Phone Screen, or moved there from Wishlist, never showed up. I enforced the rule in the UI and again in a Postgres trigger so it holds even if something bypasses the UI (`migrations/018`). It only affects new writes, so older cards were left alone.
+- **A missing file broke the build.** A page imported a `Footer` component I had never committed, so a fresh checkout could not build. The next commit added it. The lesson was to build from a clean clone before pushing.
+- **CI went through two designs.** The first Playwright workflow ran against a real staging Supabase project through repository secrets, which meant test accounts and data in a live database. I replaced it with a throwaway local Supabase stack started in the job, so CI needs no secrets and touches nothing real. Then it failed on Node 20 because the realtime client needs a native `WebSocket`, so CI now runs on Node 22.
+- **CI builds the database from `schema.sql`, not from the migrations.** That makes it easy for the two to drift apart: a change that exists only as a migration passes locally on a hand-patched database and fails in CI. The rule is now that every migration is also added to `supabase/schema.sql`, and the stage-rule trigger above is in both.
+
 ## Schema overview
 
 - `profiles` — extends `auth.users`, includes `resume_url`
